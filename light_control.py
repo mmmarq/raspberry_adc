@@ -10,6 +10,8 @@ import sys
 import subprocess
 import signal
 import socket
+import Crypto
+from Crypto.PublicKey import RSA
 from subprocess import Popen, PIPE, call
 from time import localtime, strftime
 from datetime import timedelta
@@ -22,10 +24,12 @@ devAddr = "0x48"
 adcPin = "0x03"
 #Light level to trigger light_on
 minLightLevel = "0x0A"
-#GPIO pint to control light relay
+#GPIO pin to control light relay
 lightPin = "25"
 #Control light status
 lightStatus = False
+#GPIO pin to open gate
+gatePin = "26"
 
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
@@ -34,6 +38,12 @@ def handler_light_off(signum, frame):
    if ( not manualOperation ):
       turn_light_off(lightPin)
    signal.alarm(0)
+
+def gate_opener(gatePin):
+   print strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate opened!!!"
+   subprocess.call(["/usr/local/bin/gpio","-g","write",gatePin,"1"])
+   time.sleep(0.5)
+   subprocess.call(["/usr/local/bin/gpio","-g","write",gatePin,"0"])   
 
 def read_light_meter(device,channel):
    #Set default ADC channel
@@ -54,10 +64,12 @@ def turn_light_off(lightPin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!"
    subprocess.call(["/usr/local/bin/gpio","-g","write",lightPin,"0"])
 
-def init_gpio(lightPin):
+def init_gpio(lightPin,gatePin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Seting up pin!"
-   subprocess.call(["/usr/local/bin/gpio","-g","mode",lightPin,"out"])
-   subprocess.call(["/usr/local/bin/gpio","-g","write",lightPin,"0"])
+   for pin in (lightPin,gatePin):
+      subprocess.call(["/usr/local/bin/gpio","-g","mode",pin,"out"])
+      subprocess.call(["/usr/local/bin/gpio","-g","write",pin,"0"])
+
 
 def light_control():
    #Define if light is in manual operation
@@ -73,9 +85,6 @@ def light_control():
    #Control light status
    global lightStatus
 
-   #Initialize pin
-   init_gpio(lightPin)
-   
    #Set SIGALARM response
    signal.signal(signal.SIGALRM, handler_light_off)
 
@@ -108,49 +117,92 @@ def light_control():
       time.sleep(5)
 
 def light_server():
-   MSGLEN = 1
+   global lightStatus
+   global lightPin
+   global manualOperation
+   global gatePin
+
+   MSGLEN = 256
    print "starting server..."
+   print "Loading Private/Public keys.."
+
+   #Load private and public keys
+   private_key = Crypto.PublicKey.RSA.importKey(open('./id_rsa', 'r').read())
+   key = Crypto.PublicKey.RSA.importKey(open('./id_rsa.pub', 'r').read())
+   public_key = key.publickey()
+
    #Create a socket object
    s = socket.socket()
    #Get local machine name
    host = socket.gethostname()
-   print host
    #Reserve a port for your service.
    port = 12345
    #Bind to the port
-   #s.bind((host, port))
-   s.bind(("127.0.0.1", port))
+   s.bind((host, port))
+   #s.bind(("127.0.0.1", port))
 
    #Now wait for client connection.
    s.listen(2)
-   
+
+   print "Waiting for connection..."
+
    while True:
-   	 try:
+      try:
          #Establish connection with client.
          c, addr = s.accept()
          print strftime("%d-%m-%Y %H:%M", localtime()) , 'Got connection from', addr
-         #c.send('Thank you for connecting')
          msg = ''
       
          while len(msg) < MSGLEN:
-               chunk = c.recv(MSGLEN-len(msg))
-               if chunk == '':
-                   raise RuntimeError("socket connection broken")
-               msg = msg + chunk
-         print "Receive: " + msg
-         if ( msg == "A" ):
-            c.send('Light Status = off')
+            chunk = c.recv(MSGLEN-len(msg))
+            if chunk == '':
+                raise RuntimeError("socket connection broken")
+            msg = msg + chunk
+         msg = str(private_key.decrypt(msg))
+         print "Received: " + msg
+         if ( msg == "light.status" ):
+            print "Light status request"
+            if ( lightStatus ):
+               c.send(public_key.encrypt('on', 32)[0])
+            else:
+               c.send(public_key.encrypt('off', 32)[0])
+         elif ( msg == "light.on" ):
+            print "Turn light on request"
+            #turn_light_on(lightPin)
+            lightStatus = True
+            manualOperation = True
+            c.send(public_key.encrypt('on', 32)[0])
+         elif ( msg == "light.off" ):
+            print "Turn light off request"
+            #turn_light_off(lightPin)
+            lightStatus = False
+            manualOperation = False
+            c.send(public_key.encrypt('off', 32)[0])
+         elif ( msg == "gate.open" ):
+            print "Gate Opening request"
+            #gate_opener(gatePin)
+            c.send(public_key.encrypt('ok', 32)[0])
          else:
-            c.send('Commando desconhecido')
-      except:
+            print "Request not valid"
+            c.send(public_key.encrypt('fail', 32)[0])
+      except Exception, e:
+         print "Exception caught...: " + e.args
          c.close()
+         break
       #Close the connection
       c.close()
 
 def main():
+   global lightPin
+   global gatePin
+
+   #Initialize pin
+   init_gpio(lightPin,gatePin)
+
    #Start light control thread
-   #p1 = threading.Thread(target=light_control, args=())
+   #p1 = threading.Thread(target=light_control, args=[])
    #p1.start()
+
    #start network process
    p2 = threading.Thread(target=light_server, args=[])
    p2.start()
