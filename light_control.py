@@ -54,6 +54,9 @@ def main():
    #Control light status
    lightStatus = False
 
+   #Initialize pin
+   init_gpio(lightPin)
+
    #Keep it running forever
    while True:
       #Read ADC light meter value and test
