@@ -23,7 +23,7 @@ devAddr = "0x48"
 #I2C ADC channel
 adcPin = "0x03"
 #Light level to trigger light_on
-minLightLevel = "0x0A"
+minLightLevel = "0x20"
 #GPIO pin to control light relay
 lightPin = "25"
 #Control light status
@@ -86,7 +86,7 @@ def light_control():
    global lightStatus
 
    #Set SIGALARM response
-   signal.signal(signal.SIGALRM, handler_light_off)
+   #signal.signal(signal.SIGALRM, handler_light_off)
 
    #Keep it running forever
    while True:
@@ -96,8 +96,8 @@ def light_control():
          turn_light_on(lightPin)
          #Set alarm to turn light off
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-         signal.alarm(timeFrame.total_seconds())
-         print strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + timeFrame.total_seconds() + " seconds"
+         print strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds"
+         signal.alarm(int(timeFrame.total_seconds()))
          #Set light status true (on)
          lightStatus = True
          #Since adc return value can vary easily, wait little more time to next loop
@@ -123,6 +123,8 @@ def light_server():
    global gatePin
 
    MSGLEN = 256
+   BYTESIZE = 32
+
    print "starting server..."
    print "Loading Private/Public keys.."
 
@@ -163,28 +165,28 @@ def light_server():
          if ( msg == "light.status" ):
             print "Light status request"
             if ( lightStatus ):
-               c.send(public_key.encrypt('on', 32)[0])
+               c.send(public_key.encrypt('on', BYTESIZE)[0])
             else:
-               c.send(public_key.encrypt('off', 32)[0])
+               c.send(public_key.encrypt('off', BYTESIZE)[0])
          elif ( msg == "light.on" ):
             print "Turn light on request"
             #turn_light_on(lightPin)
             lightStatus = True
             manualOperation = True
-            c.send(public_key.encrypt('on', 32)[0])
+            c.send(public_key.encrypt('on', BYTESIZE)[0])
          elif ( msg == "light.off" ):
             print "Turn light off request"
             #turn_light_off(lightPin)
             lightStatus = False
             manualOperation = False
-            c.send(public_key.encrypt('off', 32)[0])
+            c.send(public_key.encrypt('off', BYTESIZE)[0])
          elif ( msg == "gate.open" ):
             print "Gate Opening request"
             #gate_opener(gatePin)
-            c.send(public_key.encrypt('ok', 32)[0])
+            c.send(public_key.encrypt('ok', BYTESIZE)[0])
          else:
             print "Request not valid"
-            c.send(public_key.encrypt('fail', 32)[0])
+            c.send(public_key.encrypt('fail', BYTESIZE)[0])
       except Exception, e:
          print "Exception caught...: " + e.args
          c.close()
@@ -196,16 +198,19 @@ def main():
    global lightPin
    global gatePin
 
+   #Set SIGALARM response
+   signal.signal(signal.SIGALRM, handler_light_off)
+
    #Initialize pin
    init_gpio(lightPin,gatePin)
 
    #Start light control thread
-   #p1 = threading.Thread(target=light_control, args=[])
-   #p1.start()
+   p1 = threading.Thread(target=light_control, args=[])
+   p1.start()
 
    #start network process
-   p2 = threading.Thread(target=light_server, args=[])
-   p2.start()
+   #p2 = threading.Thread(target=light_server, args=[])
+   #p2.start()
    
    while True:
    	 time.sleep(5)
