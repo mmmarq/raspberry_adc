@@ -47,9 +47,11 @@ def gate_opener(gatePin):
 
 def read_light_meter(device,channel):
    #Set default ADC channel
-   subprocess.call(["/usr/sbin/i2cget","-y","1",device,channel])
+   p1 = Popen(["/usr/sbin/i2cget","-y","1",device,channel], stdout=PIPE)
+   p1.stdout.close()
    #Read ADC twice to get right value
-   subprocess.call(["/usr/sbin/i2cget","-y","1",device])
+   p1 = Popen(["/usr/sbin/i2cget","-y","1",device], stdout=PIPE)
+   p1.stdout.close()
    p1 = Popen(["/usr/sbin/i2cget","-y","1",device], stdout=PIPE)
    #Store ADC value
    output = p1.communicate()[0]
@@ -114,7 +116,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
 
       #Just wait a while before start next loop iteration
-      time.sleep(5)
+      time.sleep(10)
 
 def light_server():
    global lightStatus
