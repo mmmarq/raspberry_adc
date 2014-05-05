@@ -2,5 +2,5 @@
 sudo i2cget -y 1 0x48 0x03
 
 #Le valores do conversor
-while [ 1 ] ;do sudo i2cget -y 1 0x48 ; sleep 1 ; done
+while [ 1 ] ;do sudo i2cget -y 1 0x48 ; sleep 30 ; done
 

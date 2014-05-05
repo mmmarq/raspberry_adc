@@ -23,7 +23,7 @@ devAddr = "0x48"
 #I2C ADC channel
 adcPin = "0x03"
 #Light level to trigger light_on
-minLightLevel = "0x20"
+minLightLevel = "0x70"
 #GPIO pin to control light relay
 lightPin = "25"
 #Control light status
@@ -190,7 +190,7 @@ def light_server():
       except Exception, e:
          print "Exception caught...: " + e.args
          c.close()
-         break
+         continue
       #Close the connection
       c.close()
 
