@@ -23,8 +23,8 @@ import javax.crypto.Cipher;
 
 public class MyCypher {
 
-	private static final String PVT_KEY_PATH = "/Users/wmm125/temp/cypher/Private";
-	private static final String PUB_KEY_PATH = "/Users/wmm125/temp/cypher/Public";
+	private static final String PVT_KEY_PATH = "/Users/wmm125/code/raspberry_adc/Private";
+	private static final String PUB_KEY_PATH = "/Users/wmm125/code/raspberry_adc/Public";
 	
 	public static void main(String[] args){
 	   try{

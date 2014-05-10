@@ -15,8 +15,8 @@ import java.net.UnknownHostException;
 
 public class MyClient {
 
-	private static final String PVT_KEY_PATH = "/Users/wmm125/temp/cypher/Private";
-	private static final String PUB_KEY_PATH = "/Users/wmm125/temp/cypher/Public";
+	private static final String PVT_KEY_PATH = "/Users/wmm125/code/raspberry_adc/Private";
+	private static final String PUB_KEY_PATH = "/Users/wmm125/code/raspberry_adc/Public";
 	private static final String SERVER = "192.168.0.122";
 	private static final int PORT = 12345;
 
