@@ -3,24 +3,30 @@
 
 #Import needed libs
 import socket
-import Crypto
-from Crypto.PublicKey import RSA
+from keyczar import keyczar
+from keyczar import keyczart
+from keyczar.errors import KeyczarError
 
 def main():
 
-   MSGLEN = 256
-   print "starting client..."
+   PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
+   PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
+   SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
+   PASS_PHRASE = "abrete sesamo"
+
+   MSGLEN = 690
+   
    print "Loading Private/Public keys.."
+   crypter = keyczar.Encrypter.Read(PUB_KEY)
+   decrypter = keyczar.Crypter.Read(PVT_KEY)
+   signer = keyczar.UnversionedSigner.Read(SGN_KEY)
 
-   #Load private and public keys
-   private_key = Crypto.PublicKey.RSA.importKey(open('./id_rsa', 'r').read())
-   key = Crypto.PublicKey.RSA.importKey(open('./id_rsa.pub', 'r').read())
-   public_key = key.publickey()
-
+   print "starting client..."
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostname()
+   host = socket.gethostbyname("192.168.0.122")
+   print host
    #Reserve a port for your service.
    port = 12345
 
@@ -28,9 +34,10 @@ def main():
 
    while True:
       command = raw_input('Enter command: ')
-      print "Sending: " + command
-      data = public_key.encrypt(command, MSGLEN)[0]
-      print "Sending: " + private_key.decrypt(data) + " [" + str(len(data)) + "]"
+      if ( command == 'gate.open' ):
+         command = command + '|' + signer.Sign(PASS_PHRASE)
+      data = crypter.Encrypt(command)
+      print "Sending: " + decrypter.Decrypt(data) + " [" + str(len(data)) + "]"
       s.send(data)
       print "Waiting response..."
       msg = ''
@@ -40,7 +47,7 @@ def main():
             raise RuntimeError("socket connection broken")
          msg = msg + chunk
 
-      print private_key.decrypt(msg)
+      print decrypter.Decrypt(msg)
       break
 
 if __name__ == '__main__':

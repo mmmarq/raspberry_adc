@@ -1,0 +1,32 @@
+/Users/wmm125/temp/ttt/new/openssh-java/src/main/java
+wmm125-mac01:java wmm125$ 
+wmm125-mac01:java wmm125$ 
+wmm125-mac01:java wmm125$ javac -classpath /Users/wmm125/temp/ttt/new/openssh-java/src/main/java/guava-17.0.jar:/Users/wmm125/temp/ttt/new/openssh-java/src/main/java/lombok.jar:/Users/wmm125/temp/ttt/new/openssh-java/src/main/java/commons-codec-1.9.jar  com/github/fommil/ssh/SshRsaCrypto.java 
+
+
+java -classpath /Users/wmm125/temp/ttt/new/openssh-java/src/main/java/guava-17.0.jar:/Users/wmm125/temp/ttt/new/openssh-java/src/main/java/lombok.jar:/Users/wmm125/temp/ttt/new/openssh-java/src/main/java/commons-codec-1.9.jar:/Users/wmm125/temp/ttt/new/openssh-java/src/main/java/com/github/fommil/ssh SshRsaCrypto
+
+
+Keyxzar:
+
+Criar chaves:
+mkdir keys
+java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cypher/keys --purpose=crypt
+java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/keys --status=primary
+
+# Chave publica e privada
+java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cypher/keys --purpose=crypt --asymmetric
+java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/keys --status=primary
+java -jar KeyczarTool-0.71g-090613.jar pubkey --location=/Users/wmm125/temp/cypher/keys --destination=/Users/wmm125/temp/cypher/pubkeys
+
+#Chave de assinatura
+java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cypher/signkeys --purpose=sign
+java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/signkeys --status=primary
+
+
+
+javac -classpath /Users/wmm125/code/raspberry_adc/java/keyczar-0.71g-090613.jar MyClient.java
+
+java -classpath /Users/wmm125/code/raspberry_adc/java/keyczar-0.71g-090613.jar:/Users/wmm125/code/raspberry_adc/java/log4j-1.2.17.jar:/Users/wmm125/code/raspberry_adc/java/gson-2.2.4.jar:/Users/wmm125/code/raspberry_adc/java/code MyClient
+
+

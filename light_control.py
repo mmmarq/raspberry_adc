@@ -10,11 +10,14 @@ import sys
 import subprocess
 import signal
 import socket
-import Crypto
-from Crypto.PublicKey import RSA
+import traceback
+import re
 from subprocess import Popen, PIPE, call
 from time import localtime, strftime
 from datetime import timedelta
+from keyczar import keyczar
+from keyczar import keyczart
+from keyczar.errors import KeyczarError
 
 #Define if light is in manual operation
 manualOperation = False
@@ -123,27 +126,29 @@ def light_server():
    global lightPin
    global manualOperation
    global gatePin
+   
+   PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
+   PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
+   SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
+   PASS_PHRASE = "abrete sesamo"
 
-   MSGLEN = 256
-   BYTESIZE = 32
+   MSGLEN = 690
+
+   print "Loading Private/Public keys.."
+   crypter = keyczar.Encrypter.Read(PUB_KEY)
+   decrypter = keyczar.Crypter.Read(PVT_KEY)
+   signcheck = keyczar.UnversionedVerifier.Read(SGN_KEY)
 
    print "starting server..."
-   print "Loading Private/Public keys.."
-
-   #Load private and public keys
-   private_key = Crypto.PublicKey.RSA.importKey(open('./id_rsa', 'r').read())
-   key = Crypto.PublicKey.RSA.importKey(open('./id_rsa.pub', 'r').read())
-   public_key = key.publickey()
-
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostname()
+   #host = socket.gethostname()
+   host = socket.gethostbyname("192.168.0.122")
    #Reserve a port for your service.
    port = 12345
    #Bind to the port
    s.bind((host, port))
-   #s.bind(("127.0.0.1", port))
 
    #Now wait for client connection.
    s.listen(2)
@@ -162,35 +167,58 @@ def light_server():
             if chunk == '':
                 raise RuntimeError("socket connection broken")
             msg = msg + chunk
-         msg = str(private_key.decrypt(msg))
+         msg = decrypter.Decrypt(msg)
          print "Received: " + msg
          if ( msg == "light.status" ):
             print "Light status request"
             if ( lightStatus ):
-               c.send(public_key.encrypt('on', BYTESIZE)[0])
+               status = "on"
             else:
-               c.send(public_key.encrypt('off', BYTESIZE)[0])
+               status = "off"
+            if ( manualOperation ):
+            	status = status + "|manual"
+            else:
+            	status = status + "|automatic"
+            c.send(crypter.Encrypt(status))
          elif ( msg == "light.on" ):
             print "Turn light on request"
             #turn_light_on(lightPin)
             lightStatus = True
             manualOperation = True
-            c.send(public_key.encrypt('on', BYTESIZE)[0])
+            c.send(crypter.Encrypt('on'))
          elif ( msg == "light.off" ):
             print "Turn light off request"
             #turn_light_off(lightPin)
             lightStatus = False
             manualOperation = False
-            c.send(public_key.encrypt('off', BYTESIZE)[0])
-         elif ( msg == "gate.open" ):
+            c.send(crypter.Encrypt('off'))
+         elif ( msg == "set.manual" ):
+            print "Set operation manual"
+            manualOperation = True
+            signal.alarm(0)
+            c.send(crypter.Encrypt('ok'))
+         elif ( msg == "set.automatic" ):
+            print "Set operation automatic"
+            manualOperation = False
+            timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+            print strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds"
+            signal.alarm(int(timeFrame.total_seconds()))
+            c.send(crypter.Encrypt('ok'))
+         elif re.match('^gate.open\|.+',msg) is not None:
             print "Gate Opening request"
-            #gate_opener(gatePin)
-            c.send(public_key.encrypt('ok', BYTESIZE)[0])
+            passcode = msg.split('|')[1]
+            if signcheck.Verify(PASS_PHRASE,passcode):
+            	print "Signature check is ok"
+            	#gate_opener(gatePin)
+            	c.send(crypter.Encrypt('ok'))
+            else:
+            	print "Signature check fail"
+            	c.send(crypter.Encrypt('fail'))
          else:
             print "Request not valid"
-            c.send(public_key.encrypt('fail', BYTESIZE)[0])
-      except Exception, e:
-         print "Exception caught...: " + e.args
+            c.send(crypter.Encrypt('fail'))
+      except:
+         print traceback.format_exc()
          c.close()
          continue
       #Close the connection
@@ -204,15 +232,15 @@ def main():
    signal.signal(signal.SIGALRM, handler_light_off)
 
    #Initialize pin
-   init_gpio(lightPin,gatePin)
+   #init_gpio(lightPin,gatePin)
 
    #Start light control thread
-   p1 = threading.Thread(target=light_control, args=[])
-   p1.start()
+   #p1 = threading.Thread(target=light_control, args=[])
+   #p1.start()
 
    #start network process
-   #p2 = threading.Thread(target=light_server, args=[])
-   #p2.start()
+   p2 = threading.Thread(target=light_server, args=[])
+   p2.start()
    
    while True:
    	 time.sleep(5)

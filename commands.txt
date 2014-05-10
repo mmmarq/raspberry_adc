@@ -6,3 +6,21 @@ while [ 1 ] ;do sudo i2cget -y 1 0x48 ; sleep 1 ; done
 
 gpio -g mode 25 out
 gpio -g write 25 1
+
+Keyxzar:
+
+Criar chaves:
+mkdir keys
+java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cypher/keys --purpose=crypt
+java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/keys --status=primary
+
+# Chave publica e privada
+java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cypher/keys --purpose=crypt --asymmetric
+java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/keys --status=primary
+java -jar KeyczarTool-0.71g-090613.jar pubkey --location=/Users/wmm125/temp/cypher/keys --destination=/Users/wmm125/temp/cypher/pubkeys
+
+#Chave de assinatura
+java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cypher/signkeys --purpose=sign
+java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/signkeys --status=primary
+
+
