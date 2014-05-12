@@ -33,6 +33,8 @@ lightPin = "25"
 lightStatus = False
 #GPIO pin to open gate
 gatePin = "26"
+#Local data output file
+localDataFile="/Users/wmm125/code/raspberry_adc/data.txt"
 
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
@@ -61,6 +63,12 @@ def read_light_meter(device,channel):
    p1.stdout.close()
    return output
 
+def read_local_data():
+   with open(localDataFile, "rb") as f:
+      for last in f: pass
+   f.close()
+   return last.rstrip()
+   
 def turn_light_on(lightPin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!"
    subprocess.call(["/usr/local/bin/gpio","-g","write",lightPin,"1"])
@@ -130,7 +138,7 @@ def light_server():
    PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
    PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
    SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
-   PASS_PHRASE = "abrete sesamo"
+   PASS_PHRASE = "1234"
 
    MSGLEN = 690
 
@@ -144,7 +152,7 @@ def light_server():
    s = socket.socket()
    #Get local machine name
    #host = socket.gethostname()
-   host = socket.gethostbyname("192.168.0.122")
+   host = socket.gethostbyname("10.114.148.51")
    #Reserve a port for your service.
    port = 12345
    #Bind to the port
@@ -169,16 +177,29 @@ def light_server():
             msg = msg + chunk
          msg = decrypter.Decrypt(msg)
          print "Received: " + msg
-         if ( msg == "light.status" ):
+         if ( msg == "status.all" ):
+            print "Full status requested"
+            status = ""
+            if ( lightStatus ):
+               status = status + "on "
+            else:
+               status = status + "off "
+            if ( manualOperation ):
+               status = status + "manual "
+            else:
+               status = status + "automatic "
+            status = status + read_local_data()
+            c.send(crypter.Encrypt(status))
+         elif ( msg == "light.status" ):
             print "Light status request"
             if ( lightStatus ):
-               status = "on"
+               status = "on "
             else:
-               status = "off"
+               status = "off "
             if ( manualOperation ):
-            	status = status + "|manual"
+            	status = status + "manual"
             else:
-            	status = status + "|automatic"
+            	status = status + "automatic"
             c.send(crypter.Encrypt(status))
          elif ( msg == "light.on" ):
             print "Turn light on request"
