@@ -138,14 +138,14 @@ def light_server():
    PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
    PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
    SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
-   PASS_PHRASE = "1234"
+   PASS_PHRASE = "g25-05edgwi2dmEup0RI25se6dw"
 
    MSGLEN = 690
 
    print "Loading Private/Public keys.."
    crypter = keyczar.Encrypter.Read(PUB_KEY)
    decrypter = keyczar.Crypter.Read(PVT_KEY)
-   signcheck = keyczar.UnversionedVerifier.Read(SGN_KEY)
+   signer = keyczar.UnversionedSigner.Read(SGN_KEY)
 
    print "starting server..."
    #Create a socket object
@@ -228,7 +228,8 @@ def light_server():
          elif re.match('^gate.open\|.+',msg) is not None:
             print "Gate Opening request"
             passcode = msg.split('|')[1]
-            if signcheck.Verify(PASS_PHRASE,passcode):
+            HASH = signer.Sign(passcode) 
+            if ( PASS_PHRASE == HASH):
             	print "Signature check is ok"
             	#gate_opener(gatePin)
             	c.send(crypter.Encrypt('ok'))
