@@ -25,7 +25,7 @@ def main():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostbyname("10.114.148.51")
+   host = socket.gethostbyname("192.168.0.2")
    print host
    #Reserve a port for your service.
    port = 12345

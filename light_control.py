@@ -33,31 +33,44 @@ lightPin = "25"
 lightStatus = False
 #GPIO pin to open gate
 gatePin = "26"
+#Gate signal lenght
+gateSignalLenght = 0.5
 #Local data output file
-localDataFile="/Users/wmm125/code/raspberry_adc/data.txt"
+localDataFile = "/Users/wmm125/code/raspberry_adc/data.txt"
+#i2cget command full path
+i2cget = "/usr/sbin/i2cget"
+#gpio command full path
+gpio = "/usr/local/bin/gpio"
+#Server port number
+portNum = 12345
+
+#Cyphering paths
+PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
+PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
+SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
+PASS_PHRASE = "g25-05edgwi2dmEup0RI25se6dw"
 
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
    global manualOperation
-   global lightPin
    if ( not manualOperation ):
       turn_light_off(lightPin)
    signal.alarm(0)
 
 def gate_opener(gatePin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate opened!!!"
-   subprocess.call(["/usr/local/bin/gpio","-g","write",gatePin,"1"])
-   time.sleep(0.5)
-   subprocess.call(["/usr/local/bin/gpio","-g","write",gatePin,"0"])   
+   subprocess.call([gpio,"-g","write",gatePin,"1"])
+   time.sleep(gateSignalLenght)
+   subprocess.call([gpio,"-g","write",gatePin,"0"])   
 
 def read_light_meter(device,channel):
    #Set default ADC channel
-   p1 = Popen(["/usr/sbin/i2cget","-y","1",device,channel], stdout=PIPE)
+   p1 = Popen([i2cget,"-y","1",device,channel], stdout=PIPE)
    p1.stdout.close()
    #Read ADC twice to get right value
-   p1 = Popen(["/usr/sbin/i2cget","-y","1",device], stdout=PIPE)
+   p1 = Popen([i2cget,"-y","1",device], stdout=PIPE)
    p1.stdout.close()
-   p1 = Popen(["/usr/sbin/i2cget","-y","1",device], stdout=PIPE)
+   p1 = Popen([i2cget,"-y","1",device], stdout=PIPE)
    #Store ADC value
    output = p1.communicate()[0]
    p1.stdout.close()
@@ -71,35 +84,24 @@ def read_local_data():
    
 def turn_light_on(lightPin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!"
-   subprocess.call(["/usr/local/bin/gpio","-g","write",lightPin,"1"])
+   subprocess.call([gpio,"-g","write",lightPin,"1"])
 
 def turn_light_off(lightPin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!"
-   subprocess.call(["/usr/local/bin/gpio","-g","write",lightPin,"0"])
+   subprocess.call([gpio,"-g","write",lightPin,"0"])
 
 def init_gpio(lightPin,gatePin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Seting up pin!"
    for pin in (lightPin,gatePin):
-      subprocess.call(["/usr/local/bin/gpio","-g","mode",pin,"out"])
-      subprocess.call(["/usr/local/bin/gpio","-g","write",pin,"0"])
-
+      subprocess.call([gpio,"-g","mode",pin,"out"])
+      subprocess.call([gpio,"-g","write",pin,"0"])
 
 def light_control():
-   #Define if light is in manual operation
    global manualOperation
-   #I2C device address
-   global devAddr
-   #I2C ADC channel
-   global adcPin
-   #Light level to trigger light_on
-   global minLightLevel
-   #GPIO pint to control light relay
-   global lightPin
-   #Control light status
    global lightStatus
 
    #Set SIGALARM response
-   #signal.signal(signal.SIGALRM, handler_light_off)
+   signal.signal(signal.SIGALRM, handler_light_off)
 
    #Keep it running forever
    while True:
@@ -131,15 +133,8 @@ def light_control():
 
 def light_server():
    global lightStatus
-   global lightPin
    global manualOperation
-   global gatePin
    
-   PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
-   PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
-   SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
-   PASS_PHRASE = "g25-05edgwi2dmEup0RI25se6dw"
-
    MSGLEN = 690
 
    print "Loading Private/Public keys.."
@@ -151,15 +146,13 @@ def light_server():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   #host = socket.gethostname()
-   host = socket.gethostbyname("10.114.148.51")
-   #Reserve a port for your service.
-   port = 12345
+   host = socket.gethostname()
+   #host = socket.gethostbyname("10.114.148.51")
    #Bind to the port
-   s.bind((host, port))
+   s.bind((host, portNum))
 
    #Now wait for client connection.
-   s.listen(2)
+   s.listen(1)
 
    print "Waiting for connection..."
 
@@ -203,13 +196,13 @@ def light_server():
             c.send(crypter.Encrypt(status))
          elif ( msg == "light.on" ):
             print "Turn light on request"
-            #turn_light_on(lightPin)
+            turn_light_on(lightPin)
             lightStatus = True
             manualOperation = True
             c.send(crypter.Encrypt('on'))
          elif ( msg == "light.off" ):
             print "Turn light off request"
-            #turn_light_off(lightPin)
+            turn_light_off(lightPin)
             lightStatus = False
             manualOperation = False
             c.send(crypter.Encrypt('off'))
@@ -231,7 +224,7 @@ def light_server():
             HASH = signer.Sign(passcode) 
             if ( PASS_PHRASE == HASH):
             	print "Signature check is ok"
-            	#gate_opener(gatePin)
+            	gate_opener(gatePin)
             	c.send(crypter.Encrypt('ok'))
             else:
             	print "Signature check fail"
@@ -247,18 +240,15 @@ def light_server():
       c.close()
 
 def main():
-   global lightPin
-   global gatePin
-
    #Set SIGALARM response
    signal.signal(signal.SIGALRM, handler_light_off)
 
    #Initialize pin
-   #init_gpio(lightPin,gatePin)
+   init_gpio(lightPin,gatePin)
 
    #Start light control thread
-   #p1 = threading.Thread(target=light_control, args=[])
-   #p1.start()
+   p1 = threading.Thread(target=light_control, args=[])
+   p1.start()
 
    #start network process
    p2 = threading.Thread(target=light_server, args=[])
