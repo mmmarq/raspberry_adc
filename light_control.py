@@ -36,19 +36,19 @@ gatePin = "26"
 #Gate signal lenght
 gateSignalLenght = 0.5
 #Local data output file
-localDataFile = "/Users/wmm125/code/raspberry_adc/data.txt"
+localDataFile = "/media/2/log/local_data.log"
 #i2cget command full path
 i2cget = "/usr/sbin/i2cget"
 #gpio command full path
 gpio = "/usr/local/bin/gpio"
 #Server port number
-portNum = 12345
+portNum = 4055
 
 #Cyphering paths
-PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
-PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
-SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
-PASS_PHRASE = "g25-05edgwi2dmEup0RI25se6dw"
+PUB_KEY = "/home/pi/.keys/public"
+PVT_KEY = "/home/pi/.keys/private"
+SGN_KEY = "/home/pi/.keys/signkeys"
+PASS_PHRASE = "VHXxsMvdwrwoml7r44pxzE3iUuI"
 
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
@@ -99,9 +99,6 @@ def init_gpio(lightPin,gatePin):
 def light_control():
    global manualOperation
    global lightStatus
-
-   #Set SIGALARM response
-   signal.signal(signal.SIGALRM, handler_light_off)
 
    #Keep it running forever
    while True:

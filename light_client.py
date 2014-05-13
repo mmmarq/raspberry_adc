@@ -9,10 +9,10 @@ from keyczar.errors import KeyczarError
 
 def main():
 
-   PUB_KEY = "/Users/wmm125/code/raspberry_adc/public"
-   PVT_KEY = "/Users/wmm125/code/raspberry_adc/private"
-   SGN_KEY = "/Users/wmm125/code/raspberry_adc/signkeys"
-   PASS_PHRASE = "abrete sesamo"
+   PUB_KEY = "/home/pi/.keys/public"
+   PVT_KEY = "/home/pi/.keys/private"
+   SGN_KEY = "/home/pi/.keys/signkeys"
+   PASS_PHRASE = "1045"
 
    MSGLEN = 690
    
@@ -28,7 +28,7 @@ def main():
    host = socket.gethostbyname("192.168.0.2")
    print host
    #Reserve a port for your service.
-   port = 12345
+   port = 4055
 
    s.connect((host, port))
 
