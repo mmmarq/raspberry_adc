@@ -43,6 +43,8 @@ i2cget = "/usr/sbin/i2cget"
 gpio = "/usr/local/bin/gpio"
 #Server port number
 portNum = 4055
+#Server IP address
+ipAddr = "192.168.0.2"
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -77,11 +79,13 @@ def read_light_meter(device,channel):
    return output
 
 def read_local_data():
-   with open(localDataFile, "rb") as f:
-      for last in f: pass
-   f.close()
-   return last.rstrip()
-   
+   #with open(localDataFile, "rb") as f:
+   #   for last in f: pass
+   #f.close()
+   #last = last.rstrip().split()
+   #return last[2] + " " + last[3]
+   return "12 34"
+
 def turn_light_on(lightPin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!"
    subprocess.call([gpio,"-g","write",lightPin,"1"])
@@ -143,13 +147,13 @@ def light_server():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostname()
-   #host = socket.gethostbyname("10.114.148.51")
+   #host = socket.gethostname()
+   host = socket.gethostbyname(ipAddr)
    #Bind to the port
    s.bind((host, portNum))
 
    #Now wait for client connection.
-   s.listen(1)
+   s.listen(5)
 
    print "Waiting for connection..."
 
@@ -179,7 +183,9 @@ def light_server():
             else:
                status = status + "automatic "
             status = status + read_local_data()
+            print "Send: " + status
             c.send(crypter.Encrypt(status))
+            print "Message sent!"
          elif ( msg == "light.status" ):
             print "Light status request"
             if ( lightStatus ):
@@ -234,7 +240,9 @@ def light_server():
          c.close()
          continue
       #Close the connection
+      print "Connection closed!"
       c.close()
+      continue
 
 def main():
    #Set SIGALARM response

@@ -11,7 +11,6 @@ def main():
 
    PUB_KEY = "/home/pi/.keys/public"
    PVT_KEY = "/home/pi/.keys/private"
-   SGN_KEY = "/home/pi/.keys/signkeys"
    PASS_PHRASE = "1045"
 
    MSGLEN = 690
@@ -19,7 +18,6 @@ def main():
    print "Loading Private/Public keys.."
    crypter = keyczar.Encrypter.Read(PUB_KEY)
    decrypter = keyczar.Crypter.Read(PVT_KEY)
-   signer = keyczar.UnversionedSigner.Read(SGN_KEY)
 
    print "starting client..."
    #Create a socket object
@@ -35,8 +33,7 @@ def main():
    while True:
       command = raw_input('Enter command: ')
       if ( command == 'gate.open' ):
-         print signer.Sign(PASS_PHRASE)
-         command = command + '|' + signer.Sign(PASS_PHRASE)
+         command = command + '|' + PASS_PHRASE
       data = crypter.Encrypt(command)
       print "Sending: " + decrypter.Decrypt(data) + " [" + str(len(data)) + "]"
       s.send(data)
