@@ -79,12 +79,11 @@ def read_light_meter(device,channel):
    return output
 
 def read_local_data():
-   #with open(localDataFile, "rb") as f:
-   #   for last in f: pass
-   #f.close()
-   #last = last.rstrip().split()
-   #return last[2] + " " + last[3]
-   return "12 34"
+   with open(localDataFile, "rb") as f:
+      for last in f: pass
+   f.close()
+   last = last.rstrip().split()
+   return last[2] + " " + last[3]
 
 def turn_light_on(lightPin):
    print strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!"
@@ -153,7 +152,7 @@ def light_server():
    s.bind((host, portNum))
 
    #Now wait for client connection.
-   s.listen(5)
+   s.listen(2)
 
    print "Waiting for connection..."
 
@@ -242,7 +241,6 @@ def light_server():
       #Close the connection
       print "Connection closed!"
       c.close()
-      continue
 
 def main():
    #Set SIGALARM response
