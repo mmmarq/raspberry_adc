@@ -60,8 +60,10 @@ PASS_PHRASE = "VHXxsMvdwrwoml7r44pxzE3iUuI"
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
    global manualOperation
+   global lightStatus
    if ( not manualOperation ):
       turn_light_off(lightPin)
+      lightStatus = False
    signal.alarm(0)
 
 def gate_opener(gatePin):
@@ -210,7 +212,7 @@ def light_server():
             logging.info("Turn light on request")
             turn_light_on(lightPin)
             lightStatus = True
-            manualOperation = True
+            #manualOperation = True
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             signal.alarm(int(timeFrame.total_seconds()))
@@ -219,7 +221,7 @@ def light_server():
             logging.info("Turn light off request")
             turn_light_off(lightPin)
             lightStatus = False
-            manualOperation = False
+            #manualOperation = False
             signal.alarm(0)
             c.send(crypter.Encrypt('off'))
          elif ( msg == "set.manual" ):
