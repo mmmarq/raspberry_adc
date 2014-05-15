@@ -132,6 +132,8 @@ def light_control():
          lightStatus = False
          #Set manual operation fasle (no)
          manualOperation = False
+         #Remove any existing alarm
+         signal.alarm(0)
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(600) #sleep 10 minutes
 
@@ -155,7 +157,6 @@ def light_server():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   #host = socket.gethostname()
    host = socket.gethostbyname(ipAddr)
    #Bind to the port
    s.bind((host, portNum))
@@ -210,12 +211,16 @@ def light_server():
             turn_light_on(lightPin)
             lightStatus = True
             manualOperation = True
+            timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+            signal.alarm(int(timeFrame.total_seconds()))
             c.send(crypter.Encrypt('on'))
          elif ( msg == "light.off" ):
             logging.info("Turn light off request")
             turn_light_off(lightPin)
             lightStatus = False
             manualOperation = False
+            signal.alarm(0)
             c.send(crypter.Encrypt('off'))
          elif ( msg == "set.manual" ):
             logging.info("Set operation manual")
