@@ -61,9 +61,9 @@ PASS_PHRASE = "VHXxsMvdwrwoml7r44pxzE3iUuI"
 def handler_light_off(signum, frame):
    global manualOperation
    global lightStatus
-   if ( not manualOperation ):
-      turn_light_off(lightPin)
-      lightStatus = False
+   turn_light_off(lightPin)
+   lightStatus = False
+   manualOperation = False   
    signal.alarm(0)
 
 def gate_opener(gatePin):
@@ -93,12 +93,16 @@ def read_local_data():
    return last[2] + " " + last[3]
 
 def turn_light_on(lightPin):
+   global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
    subprocess.call([gpio,"-g","write",lightPin,"1"])
+   lightStatus = True
 
 def turn_light_off(lightPin):
+   global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!")
    subprocess.call([gpio,"-g","write",lightPin,"0"])
+   lightStatus = False
 
 def init_gpio(lightPin,gatePin):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Seting up pin!")
@@ -115,23 +119,19 @@ def light_control():
    #Keep it running forever
    while True:
       #Read ADC light meter value and test
-      if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus ):
+      if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin)
          #Set alarm to turn light off
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
          signal.alarm(int(timeFrame.total_seconds()))
-         #Set light status true (on)
-         lightStatus = True
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(600) #sleep 10 minutes
 
-      if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) ):
+      if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) and lightStatus ):
          #If light level bigger than trigger and light on, turn light off
          turn_light_off(lightPin)
-         #Set light status false (off)
-         lightStatus = False
          #Set manual operation fasle (no)
          manualOperation = False
          #Remove any existing alarm
@@ -211,8 +211,7 @@ def light_server():
          elif ( msg == "light.on" ):
             logging.info("Turn light on request")
             turn_light_on(lightPin)
-            lightStatus = True
-            #manualOperation = True
+            manualOperation = True
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             signal.alarm(int(timeFrame.total_seconds()))
@@ -220,8 +219,7 @@ def light_server():
          elif ( msg == "light.off" ):
             logging.info("Turn light off request")
             turn_light_off(lightPin)
-            lightStatus = False
-            #manualOperation = False
+            manualOperation = True
             signal.alarm(0)
             c.send(crypter.Encrypt('off'))
          elif ( msg == "set.manual" ):
