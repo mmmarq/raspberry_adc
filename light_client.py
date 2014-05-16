@@ -11,7 +11,6 @@ def main():
 
    PUB_KEY = "/home/pi/.keys/public"
    PVT_KEY = "/home/pi/.keys/private"
-   PASS_PHRASE = "1045"
 
    MSGLEN = 690
    
@@ -33,6 +32,7 @@ def main():
    while True:
       command = raw_input('Enter command: ')
       if ( command == 'gate.open' ):
+         PASS_PHRASE = raw_input('Enter pass code: ')
          command = command + '|' + PASS_PHRASE
       data = crypter.Encrypt(command)
       print "Sending: " + decrypter.Decrypt(data) + " [" + str(len(data)) + "]"
