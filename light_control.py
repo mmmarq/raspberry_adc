@@ -189,7 +189,7 @@ def light_server():
    #Now wait for client connection.
    s.listen(2)
 
-   logging.info("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connection...")
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connection...")
 
    while True:
       try:
@@ -206,7 +206,7 @@ def light_server():
          msg = decrypter.Decrypt(msg)
          logging.info("Received: " + msg)
          if ( msg == "status.all" ):
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Full status requested")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Full status requested")
             status = ""
             if ( lightStatus ):
                status = status + "on "
@@ -221,7 +221,7 @@ def light_server():
             c.send(crypter.Encrypt(status))
             logging.info("Message sent!")
          elif ( msg == "light.status" ):
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Light status request")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light status request")
             if ( lightStatus ):
                status = "on "
             else:
@@ -232,7 +232,7 @@ def light_server():
             	status = status + "automatic"
             c.send(crypter.Encrypt(status))
          elif ( msg == "light.on" ):
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
             turn_light_on(lightPin)
             manualOperation = True
             mySleep = True
@@ -241,19 +241,19 @@ def light_server():
             signal.alarm(int(timeFrame.total_seconds()))
             c.send(crypter.Encrypt('on'))
          elif ( msg == "light.off" ):
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
             turn_light_off(lightPin)
             manualOperation = True
             mySleep = True
             signal.alarm(0)
             c.send(crypter.Encrypt('off'))
          elif ( msg == "set.manual" ):
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
             manualOperation = True
             signal.alarm(0)
             c.send(crypter.Encrypt('ok'))
          elif ( msg == "set.automatic" ):
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
             manualOperation = False
             mySleep = False
             if ( lightStatus ):
@@ -262,25 +262,25 @@ def light_server():
                signal.alarm(int(timeFrame.total_seconds()))
             c.send(crypter.Encrypt('ok'))
          elif re.match('^gate.open\|.+',msg) is not None:
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
             passcode = msg.split('|')[1]
             HASH = signer.Sign(passcode) 
             if ( PASS_PHRASE == HASH):
-            	logging.info("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
+            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
             	gate_opener(gatePin)
             	c.send(crypter.Encrypt('ok'))
             else:
-            	logging.info("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
+            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
             	c.send(crypter.Encrypt('fail'))
          else:
-            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
       except:
          logging.info(traceback.format_exc())
          c.close()
          continue
       #Close the connection
-      logging.info("%d-%m-%Y %H:%M", localtime()) + " - Connection closed!")
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Connection closed!")
       c.close()
 
 def main():
