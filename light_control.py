@@ -145,13 +145,16 @@ def light_control():
       
       #Check if there is light enough outside
       if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) ):
-         #Set manual operation fasle (no)
-         manualOperation = False
          #Remove any existing alarm
          signal.alarm(0)
+         #Set manual operation fasle (no)
+         if ( manualOperation ):
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set manual opration false.")
+            manualOperation = False
          #Set sleep false in order to enable light turn on next night
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Wake up light level checking.")
-         mySleep = False
+         if ( mySleep ):
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Wake up light level checking.")
+            mySleep = False
          
          #If ligh is on, turn light off
          if ( lightStatus ):
@@ -160,7 +163,7 @@ def light_control():
          	  turn_light_off(lightPin)
             #Since adc return value can vary easily, wait little more time to next loop
          
-         time.sleep(600) #sleep 10 minutes
+         time.sleep(300) #sleep 10 minutes
 
       #Just wait a while before start next loop iteration
       time.sleep(10)
