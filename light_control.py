@@ -40,8 +40,6 @@ lightStatus = False
 gatePin = "26"
 #Gate signal lenght
 gateSignalLenght = 0.5
-#Local data output file
-localDataFile = "/media/2/log/local_data.log"
 #i2cget command full path
 i2cget = "/usr/sbin/i2cget"
 #gpio command full path
@@ -86,6 +84,7 @@ def read_light_meter(device,channel):
    return output
 
 def read_local_data():
+   localDataFile = "/media/2/log/"+strftime("%Y-%m_local_data.log", localtime())
    with open(localDataFile, "rb") as f:
       for last in f: pass
    f.close()
