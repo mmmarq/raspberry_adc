@@ -36,6 +36,8 @@ minLightLevel = "0x70"
 lightPin = "25"
 #Control light status
 lightStatus = False
+#Control if light meter should sleep
+mySleep = False
 #GPIO pin to open gate
 gatePin = "26"
 #Gate signal lenght
@@ -59,9 +61,14 @@ PASS_PHRASE = "VHXxsMvdwrwoml7r44pxzE3iUuI"
 def handler_light_off(signum, frame):
    global manualOperation
    global lightStatus
+   global mySleep
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Its time to turn lights off... See you tomorrow!")
    turn_light_off(lightPin)
    lightStatus = False
    manualOperation = False   
+   #Set sleep true in order to trigger light on only next night
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level checking is going to sleep until morning.")
+   mySleep = True
    signal.alarm(0)
 
 def gate_opener(gatePin):
@@ -112,13 +119,21 @@ def init_gpio(lightPin,gatePin):
 def light_control():
    global manualOperation
    global lightStatus
+   global mySleep
+
+   #Variable to make this thread turn light on automaticaly only next day
+   mySleep = False
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
 
    #Keep it running forever
    while True:
       #Read ADC light meter value and test
-      if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation):
+      #only if there is no light enough outsidec(check minLightLevel)
+      #light is not alread on (lightStatus)
+      #system is not in manual operation (manualOperation)
+      #light meter is not in sleep mode (mySleep)
+      if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin)
          #Set alarm to turn light off
@@ -127,15 +142,24 @@ def light_control():
          signal.alarm(int(timeFrame.total_seconds()))
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(600) #sleep 10 minutes
-
-      if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) and lightStatus ):
-         #If light level bigger than trigger and light on, turn light off
-         turn_light_off(lightPin)
+      
+      #Check if there is light enough outside
+      if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) ):
          #Set manual operation fasle (no)
          manualOperation = False
          #Remove any existing alarm
          signal.alarm(0)
-         #Since adc return value can vary easily, wait little more time to next loop
+         #Set sleep false in order to enable light turn on next night
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Wake up light level checking.")
+         mySleep = False
+         
+         #If ligh is on, turn light off
+         if ( lightStatus ):
+         	  logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
+         	  #If light level bigger than trigger and light on, turn light off
+         	  turn_light_off(lightPin)
+            #Since adc return value can vary easily, wait little more time to next loop
+         
          time.sleep(600) #sleep 10 minutes
 
       #Just wait a while before start next loop iteration
@@ -144,6 +168,7 @@ def light_control():
 def light_server():
    global lightStatus
    global manualOperation
+   global mySleep
    
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Network Server")
 
@@ -154,7 +179,6 @@ def light_server():
    decrypter = keyczar.Crypter.Read(PVT_KEY)
    signer = keyczar.UnversionedSigner.Read(SGN_KEY)
 
-   logging.info("starting server...")
    #Create a socket object
    s = socket.socket()
    #Get local machine name
@@ -165,7 +189,7 @@ def light_server():
    #Now wait for client connection.
    s.listen(2)
 
-   logging.info("Waiting for connection...")
+   logging.info("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connection...")
 
    while True:
       try:
@@ -182,7 +206,7 @@ def light_server():
          msg = decrypter.Decrypt(msg)
          logging.info("Received: " + msg)
          if ( msg == "status.all" ):
-            logging.info("Full status requested")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Full status requested")
             status = ""
             if ( lightStatus ):
                status = status + "on "
@@ -197,7 +221,7 @@ def light_server():
             c.send(crypter.Encrypt(status))
             logging.info("Message sent!")
          elif ( msg == "light.status" ):
-            logging.info("Light status request")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Light status request")
             if ( lightStatus ):
                status = "on "
             else:
@@ -208,51 +232,55 @@ def light_server():
             	status = status + "automatic"
             c.send(crypter.Encrypt(status))
          elif ( msg == "light.on" ):
-            logging.info("Turn light on request")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
             turn_light_on(lightPin)
             manualOperation = True
+            mySleep = True
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             signal.alarm(int(timeFrame.total_seconds()))
             c.send(crypter.Encrypt('on'))
          elif ( msg == "light.off" ):
-            logging.info("Turn light off request")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
             turn_light_off(lightPin)
             manualOperation = True
+            mySleep = True
             signal.alarm(0)
             c.send(crypter.Encrypt('off'))
          elif ( msg == "set.manual" ):
-            logging.info("Set operation manual")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
             manualOperation = True
             signal.alarm(0)
             c.send(crypter.Encrypt('ok'))
          elif ( msg == "set.automatic" ):
-            logging.info("Set operation automatic")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
             manualOperation = False
-            timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-            signal.alarm(int(timeFrame.total_seconds()))
+            mySleep = False
+            if ( lightStatus ):
+               timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+               signal.alarm(int(timeFrame.total_seconds()))
             c.send(crypter.Encrypt('ok'))
          elif re.match('^gate.open\|.+',msg) is not None:
-            logging.info("Gate Opening request")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
             passcode = msg.split('|')[1]
             HASH = signer.Sign(passcode) 
             if ( PASS_PHRASE == HASH):
-            	logging.info("Signature check is ok")
+            	logging.info("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
             	gate_opener(gatePin)
             	c.send(crypter.Encrypt('ok'))
             else:
-            	logging.info("Signature check fail")
+            	logging.info("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
             	c.send(crypter.Encrypt('fail'))
          else:
-            logging.info("Request not valid")
+            logging.info("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
       except:
          logging.info(traceback.format_exc())
          c.close()
          continue
       #Close the connection
-      logging.info("Connection closed!")
+      logging.info("%d-%m-%Y %H:%M", localtime()) + " - Connection closed!")
       c.close()
 
 def main():
