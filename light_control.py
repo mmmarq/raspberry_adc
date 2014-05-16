@@ -149,11 +149,11 @@ def light_control():
          signal.alarm(0)
          #Set manual operation fasle (no)
          if ( manualOperation ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set manual opration false.")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual opration false.")
             manualOperation = False
          #Set sleep false in order to enable light turn on next night
          if ( mySleep ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Wake up light level checking.")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Wake up light level checking.")
             mySleep = False
          
          #If ligh is on, turn light off
