@@ -98,6 +98,21 @@ def read_local_data():
    last = last.rstrip().split()
    return last[2] + " " + last[3]
 
+def get_status():
+   global lightStatus
+   global manualOperation
+   status = ""
+   if ( lightStatus ):
+      status = status + "on "
+   else:
+      status = status + "off "
+   if ( manualOperation ):
+      status = status + "manual "
+   else:
+      status = status + "automatic "
+   status = status + read_local_data()
+   return status
+
 def turn_light_on(lightPin):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
@@ -210,30 +225,10 @@ def light_server():
          logging.info("Received: " + msg)
          if ( msg == "status.all" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Full status requested")
-            status = ""
-            if ( lightStatus ):
-               status = status + "on "
-            else:
-               status = status + "off "
-            if ( manualOperation ):
-               status = status + "manual "
-            else:
-               status = status + "automatic "
-            status = status + read_local_data()
+            status = get_status()
             logging.info("Send: " + status)
             c.send(crypter.Encrypt(status))
             logging.info("Message sent!")
-         elif ( msg == "light.status" ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light status request")
-            if ( lightStatus ):
-               status = "on "
-            else:
-               status = "off "
-            if ( manualOperation ):
-            	status = status + "manual"
-            else:
-            	status = status + "automatic"
-            c.send(crypter.Encrypt(status))
          elif ( msg == "light.on" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
             turn_light_on(lightPin)
@@ -242,19 +237,19 @@ def light_server():
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             signal.alarm(int(timeFrame.total_seconds()))
-            c.send(crypter.Encrypt('on'))
+            c.send(crypter.Encrypt(get_status()))
          elif ( msg == "light.off" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
             turn_light_off(lightPin)
             manualOperation = True
             mySleep = True
             signal.alarm(0)
-            c.send(crypter.Encrypt('off'))
+            c.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.manual" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
             manualOperation = True
             signal.alarm(0)
-            c.send(crypter.Encrypt('ok'))
+            c.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.automatic" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
             manualOperation = False
@@ -263,7 +258,7 @@ def light_server():
                timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
                signal.alarm(int(timeFrame.total_seconds()))
-            c.send(crypter.Encrypt('ok'))
+            c.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
             passcode = msg.split('|')[1]
