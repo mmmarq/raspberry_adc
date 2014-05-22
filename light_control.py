@@ -104,15 +104,15 @@ def parse_phrase(phrase):
    return result
 
 #Convert text file to audio file
-def tts(text_tokens):
-   fileCount = 0
-   audioFiles[]
+def tts(text_tokens,count):
+   fileCount = count
+   audioFiles = []
    for token in text_tokens:
       URL = baseUrl + remove_space(token)
-      command = ["curl",URL,"--user-agent","\"Mozilla/5.0\"","-o",messageFolder+os.pathsep+filePrefix+str(fileCount)+fileSufix]
+      command = ["curl",URL,"--user-agent","\"Mozilla/5.0\"","-o",os.path.join(messageFolder,filePrefix+str(fileCount)+fileSufix)]
       subprocess.call(command)
-      audioFiles.extend([messageFolder+os.pathsep+filePrefix+str(fileCount)+fileSufix])
-      fileCount += 1
+      audioFiles.extend([os.path.join(messageFolder,filePrefix+str(fileCount)+fileSufix)])
+      fileCount = fileCount + 1
    return audioFiles
 
 def remove_space(text):
@@ -247,7 +247,8 @@ def light_server():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostbyname(ipAddr)
+   #host = socket.gethostbyname(ipAddr)
+   host = socket.gethostbyname("localhost")
    #Bind to the port
    s.bind((host, portNum))
 
@@ -317,15 +318,24 @@ def light_server():
             else:
             	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
             	c.send(crypter.Encrypt('fail'))
-         elif  re.match('^text.message\|.+',msg) is not None:
-         	  logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Incomming message")
-         	  message = msg.split('|')[1]
-         	  if not os.path.exists(messageFolder):
+         elif re.match('^text.message\|.+',msg) is not None:
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Incomming message")
+            message = msg.split('|')[1]
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Message: " + message)
+            if not os.path.exists(messageFolder):
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + messageFolder + " folder does not exist, creating...")
                os.makedirs(messageFolder)
             fileName = strftime("%Y_%m_%d_%H_%M_%S.txt", localtime())
-            text_file = open(messageFolder + os.pathsep + fileName, "w")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating message file " + fileName)
+            text_file = open(os.path.join(messageFolder,fileName), "w")
             text_file.write("%s" % message)
             text_file.close()
+            c.send(crypter.Encrypt('ok'))
+         elif ( msg == "read.message" ):
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Message reading request")
+            message_thread = threading.Thread(target=messageReader, args=[])
+            message_thread.start()
+            c.send(crypter.Encrypt('ok'))
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
@@ -347,6 +357,7 @@ def message_checker():
    ledStatus = 0
    
    if not os.path.exists(messageFolder):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + messageFolder + " folder does not exist, creating...")
       os.makedirs(messageFolder)
 
    while True:
@@ -365,32 +376,48 @@ def message_checker():
 
 def messageReader():
    global messageFolder
-   audioFiles[]
+   audioFiles = []
+   fileCount = 0
    
    if not os.path.exists(messageFolder):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + messageFolder + " folder does not exist, creating...")
       os.makedirs(messageFolder)
 
    #List files inside message folder
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Checking new messages")
    onlyfiles = [ f for f in listdir(messageFolder) if isfile(join(messageFolder,f)) ]
    if ( len(onlyfiles) > 0 ):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + str(len(onlyfiles)) + " new messages found")
       for files in onlyfiles:
-         with open(files) as f:
-         	  content = f.readlines()
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading file " + files)
+         with open(os.path.join(messageFolder,files)) as f:
+            content = f.readlines()
          for text in content:
-         	  audioFiles.extend([tts(parse_phrase(text)])
+            audioFiles.extend(tts(parse_phrase(text),fileCount))
+            fileCount = len(audioFiles)
+         fileCount = 0
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Playing audio files")
          command = ["/usr/bin/mplayer","-ao","alsa","-really-quiet","-noconsolecontrols"]
          command.extend(audioFiles)
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Command: ")
+         logging.info(command)
          subprocess.call(command);
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Removing audio files") 
          for audio in audioFiles:
-         	  os.remove(messageFolder + os.pathsep + audio)
-         os.remove(messageFolder + os.pathsep + files)
+            os.remove(audio)
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Removing message file") 
+         os.remove(os.path.join(messageFolder,files))
+         audioFiles = []
    else:
-      audioFiles.extend([tts(parse_phrase("Não existem mensagens novas")])
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - No new message files found")
+      audioFiles.extend(tts(parse_phrase("Não existem mensagens novas"),0))
       command = ["/usr/bin/mplayer","-ao","alsa","-really-quiet","-noconsolecontrols"]
       command.extend(audioFiles)
       subprocess.call(command);
       for files in audioFiles:
-         os.remove(messageFolder + os.pathsep + files)
+         os.remove(files)
+      audioFiles = []
+      fileCount = 0
 
 def main():
 
@@ -408,7 +435,7 @@ def main():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control threads!")
 
    #Set SIGALARM response
-   #signal.signal(signal.SIGALRM, handler_light_off)
+   signal.signal(signal.SIGALRM, handler_light_off)
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
@@ -420,12 +447,12 @@ def main():
    #p1.start()
 
    #start network process
-   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control Network Server")
-   #p2 = threading.Thread(target=light_server, args=[])
-   #p2.start()
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control Network Server")
+   p2 = threading.Thread(target=light_server, args=[])
+   p2.start()
    
    #start message checker process
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Message Checker Threas")
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Message Checker Thread")
    p3 = threading.Thread(target=message_checker, args=[])
    p3.start()
    

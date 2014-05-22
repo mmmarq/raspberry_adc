@@ -9,8 +9,8 @@ from keyczar.errors import KeyczarError
 
 def main():
 
-   PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
-   PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
+   PUB_KEY = "/home/pi/.keys/public"
+   PVT_KEY = "/home/pi/.keys/private"
 
    MSGLEN = 690
    
@@ -22,7 +22,8 @@ def main():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostbyname("mmmarq.dnsdynamic.net")
+   #host = socket.gethostbyname("mmmarq.dnsdynamic.net")
+   host = socket.gethostbyname("localhost")
    print host
    #Reserve a port for your service.
    port = 4055
