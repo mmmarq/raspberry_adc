@@ -61,6 +61,12 @@ greenLed = "18"
 blueLed = "27"
 #Message storage folder
 messageFolder = "messages"
+#URL to convert file
+baseUrl="http://translate.google.com/translate_tts?tl=pt&q="
+#Audio file prefix
+filePrefix="audio_"
+#Audio file prefix
+fileSufix=".mp3"
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -81,6 +87,36 @@ def handler_light_off(signum, frame):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level checking is going to sleep until morning.")
    mySleep = True
    signal.alarm(0)
+
+#Text Message parser
+def parse_phrase(phrase):
+   temp = phrase.split(" ")
+   result = []
+   out = ""
+   
+   for text in temp:
+      if ( (len(out) + len(text)) < 99 ):
+         out = out + " " + text
+      else:
+         result.extend([out])
+         out = text
+   result.extend([out])
+   return result
+
+#Convert text file to audio file
+def tts(text_tokens):
+   fileCount = 0
+   audioFiles[]
+   for token in text_tokens:
+      URL = baseUrl + remove_space(token)
+      command = ["curl",URL,"--user-agent","\"Mozilla/5.0\"","-o",messageFolder+os.pathsep+filePrefix+str(fileCount)+fileSufix]
+      subprocess.call(command)
+      audioFiles.extend([messageFolder+os.pathsep+filePrefix+str(fileCount)+fileSufix])
+      fileCount += 1
+   return audioFiles
+
+def remove_space(text):
+   return text.replace(" ", "%20")
 
 def gate_opener(gatePin):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate opened!!!")
@@ -323,8 +359,38 @@ def message_checker():
          	  ledStatus = 0
          subprocess.call([gpio,"-g","write",greenLed,str(ledStatus)])
       else:
-         #DESLIGA LED
+         ledStatus = 0
+         subprocess.call([gpio,"-g","write",greenLed,str(ledStatus)])
       time.sleep(1)
+
+def messageReader():
+   global messageFolder
+   audioFiles[]
+   
+   if not os.path.exists(messageFolder):
+      os.makedirs(messageFolder)
+
+   #List files inside message folder
+   onlyfiles = [ f for f in listdir(messageFolder) if isfile(join(messageFolder,f)) ]
+   if ( len(onlyfiles) > 0 ):
+      for files in onlyfiles:
+         with open(files) as f:
+         	  content = f.readlines()
+         for text in content:
+         	  audioFiles.extend([tts(parse_phrase(text)])
+         command = ["/usr/bin/mplayer","-ao","alsa","-really-quiet","-noconsolecontrols"]
+         command.extend(audioFiles)
+         subprocess.call(command);
+         for audio in audioFiles:
+         	  os.remove(messageFolder + os.pathsep + audio)
+         os.remove(messageFolder + os.pathsep + files)
+   else:
+      audioFiles.extend([tts(parse_phrase("Não existem mensagens novas")])
+      command = ["/usr/bin/mplayer","-ao","alsa","-really-quiet","-noconsolecontrols"]
+      command.extend(audioFiles)
+      subprocess.call(command);
+      for files in audioFiles:
+         os.remove(messageFolder + os.pathsep + files)
 
 def main():
 
@@ -342,21 +408,26 @@ def main():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control threads!")
 
    #Set SIGALARM response
-   signal.signal(signal.SIGALRM, handler_light_off)
+   #signal.signal(signal.SIGALRM, handler_light_off)
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
    init_gpio(lightPin,gatePin)
 
    #Start light control thread
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
-   p1 = threading.Thread(target=light_control, args=[])
-   p1.start()
+   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
+   #p1 = threading.Thread(target=light_control, args=[])
+   #p1.start()
 
    #start network process
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control Network Server")
-   p2 = threading.Thread(target=light_server, args=[])
-   p2.start()
+   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control Network Server")
+   #p2 = threading.Thread(target=light_server, args=[])
+   #p2.start()
+   
+   #start message checker process
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Message Checker Threas")
+   p3 = threading.Thread(target=message_checker, args=[])
+   p3.start()
    
    while True:
    	 time.sleep(5)
