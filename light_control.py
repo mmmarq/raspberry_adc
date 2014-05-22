@@ -14,6 +14,7 @@ import socket
 import traceback
 import logging
 import re
+import os
 from subprocess import Popen, PIPE, call
 from time import localtime, strftime
 from datetime import timedelta
@@ -21,6 +22,8 @@ from keyczar import keyczar
 from keyczar import keyczart
 from keyczar.errors import KeyczarError
 from optparse import OptionParser
+from os import listdir
+from os.path import isfile, join
 
 #Log file name
 logFile = ""
@@ -50,6 +53,14 @@ gpio = "/usr/local/bin/gpio"
 portNum = 4055
 #Server IP address
 ipAddr = "192.168.0.2"
+#Red led pin
+redLed = "17"
+#Green led pin
+greenLed = "18"
+#Blue led pin
+blueLed = "27"
+#Message storage folder
+messageFolder = "messages"
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -127,7 +138,7 @@ def turn_light_off(lightPin):
 
 def init_gpio(lightPin,gatePin):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Seting up pin!")
-   for pin in (lightPin,gatePin):
+   for pin in (lightPin,gatePin,redLed,greenLed,blueLed):
       subprocess.call([gpio,"-g","mode",pin,"out"])
       subprocess.call([gpio,"-g","write",pin,"0"])
 
@@ -270,6 +281,15 @@ def light_server():
             else:
             	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
             	c.send(crypter.Encrypt('fail'))
+         elif  re.match('^text.message\|.+',msg) is not None:
+         	  logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Incomming message")
+         	  message = msg.split('|')[1]
+         	  if not os.path.exists(messageFolder):
+               os.makedirs(messageFolder)
+            fileName = strftime("%Y_%m_%d_%H_%M_%S.txt", localtime())
+            text_file = open(messageFolder + os.pathsep + fileName, "w")
+            text_file.write("%s" % message)
+            text_file.close()
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
@@ -280,6 +300,31 @@ def light_server():
       #Close the connection
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Connection closed!")
       c.close()
+
+def message_checker():
+   global redLed
+   global greenLed
+   global blueLed
+   global messageFolder
+
+   #Led status control
+   ledStatus = 0
+   
+   if not os.path.exists(messageFolder):
+      os.makedirs(messageFolder)
+
+   while True:
+      #List files inside message folder
+      onlyfiles = [ f for f in listdir(messageFolder) if isfile(join(messageFolder,f)) ]
+      if ( len(onlyfiles) > 0 ):
+         if ( ledStatus == 0 ):
+         	  ledStatus = 1
+         else:
+         	  ledStatus = 0
+         subprocess.call([gpio,"-g","write",greenLed,str(ledStatus)])
+      else:
+         #DESLIGA LED
+      time.sleep(1)
 
 def main():
 
