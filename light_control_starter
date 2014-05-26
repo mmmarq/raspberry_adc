@@ -15,7 +15,7 @@ case "$1" in
     ;;
   stop)
     echo "Stopping light_control.py"
-    killall light_control.py
+    sudo killall light_control.py
     ;;
   restart)
     echo "Stopping light_control.py"

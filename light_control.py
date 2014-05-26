@@ -14,6 +14,7 @@ import socket
 import traceback
 import logging
 import re
+import os
 from subprocess import Popen, PIPE, call
 from time import localtime, strftime
 from datetime import timedelta
@@ -99,7 +100,7 @@ def read_status():
    if not os.path.exists(configFileFolder):
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
       os.makedirs(configFileFolder)
-   if not os.path.isfile(os.path.join(configFileFolder,configFileName))
+   if not os.path.isfile(os.path.join(configFileFolder,configFileName)):
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
       text_file = open(os.path.join(configFileFolder,configFileName), "w")
       status = get_status()
@@ -116,7 +117,7 @@ def save_status():
    if not os.path.exists(configFileFolder):
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
       os.makedirs(configFileFolder)
-   if os.path.isfile(os.path.join(configFileFolder,configFileName))
+   if os.path.isfile(os.path.join(configFileFolder,configFileName)):
       os.remove(os.path.join(configFileFolder,configFileName))
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current statis")
    text_file = open(os.path.join(configFileFolder,configFileName), "w")
@@ -178,18 +179,24 @@ def light_control():
    #Read previous status
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
    status = read_status()
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + status)
    if ( status.split(' ')[0] == "on" ):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light on")
       lightStatus = True
       turn_light_on(lightPin)
       timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
       signal.alarm(int(timeFrame.total_seconds()))
    else:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light off")
       lightStatus = False
       turn_light_off(lightPin)
       signal.alarm(0)
    if ( status.split(' ')[1] == "manual" ):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
       manualOperation = True
    else:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
       manualOperation = False
 
    #Keep it running forever
