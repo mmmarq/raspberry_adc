@@ -50,6 +50,10 @@ gpio = "/usr/local/bin/gpio"
 portNum = 4055
 #Server IP address
 ipAddr = "192.168.0.2"
+#Config file folder
+configFileFolder = "/media/2/log"
+#Config file name
+configFileName = "light_control.cfg"
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -89,6 +93,36 @@ def read_light_meter(device,channel):
    output = p1.communicate()[0]
    p1.stdout.close()
    return output
+
+def read_status():
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
+   if not os.path.exists(configFileFolder):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
+      os.makedirs(configFileFolder)
+   if not os.path.isfile(os.path.join(configFileFolder,configFileName))
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
+      text_file = open(os.path.join(configFileFolder,configFileName), "w")
+      status = get_status()
+      text_file.write("%s" % status)
+      text_file.close()
+      return status
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading config file content")
+   with open(os.path.join(configFileFolder,configFileName)) as f:
+      content = f.readline()
+      return content
+
+def save_status():
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Saving configuration file")
+   if not os.path.exists(configFileFolder):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
+      os.makedirs(configFileFolder)
+   if os.path.isfile(os.path.join(configFileFolder,configFileName))
+      os.remove(os.path.join(configFileFolder,configFileName))
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current statis")
+   text_file = open(os.path.join(configFileFolder,configFileName), "w")
+   status = get_status()
+   text_file.write("%s" % status)
+   text_file.close()
 
 def read_local_data():
    localDataFile = "/media/2/log/"+strftime("%Y-%m_local_data.log", localtime())
@@ -140,6 +174,23 @@ def light_control():
    mySleep = False
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
+   
+   #Read previous status
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
+   status = read_status()
+   if ( status.split(' ')[0] == "on" ):
+      lightStatus = True
+      turn_light_on(lightPin)
+      timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+      signal.alarm(int(timeFrame.total_seconds()))
+   else:
+      lightStatus = False
+      turn_light_off(lightPin)
+      signal.alarm(0)
+   if ( status.split(' ')[1] == "manual" ):
+      manualOperation = True
+   else:
+      manualOperation = False
 
    #Keep it running forever
    while True:
@@ -155,6 +206,8 @@ def light_control():
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
          signal.alarm(int(timeFrame.total_seconds()))
+         #Save config file
+         save_status()
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(600) #sleep 10 minutes
       
@@ -177,7 +230,8 @@ def light_control():
          	  #If light level bigger than trigger and light on, turn light off
          	  turn_light_off(lightPin)
             #Since adc return value can vary easily, wait little more time to next loop
-         
+         #Save config file
+         save_status()
          time.sleep(300) #sleep 10 minutes
 
       #Just wait a while before start next loop iteration
@@ -237,6 +291,7 @@ def light_server():
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             signal.alarm(int(timeFrame.total_seconds()))
+            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "light.off" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
@@ -244,11 +299,13 @@ def light_server():
             manualOperation = True
             mySleep = True
             signal.alarm(0)
+            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.manual" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
             manualOperation = True
             signal.alarm(0)
+            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.automatic" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
@@ -258,6 +315,7 @@ def light_server():
                timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
                signal.alarm(int(timeFrame.total_seconds()))
+            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
