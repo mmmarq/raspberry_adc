@@ -126,12 +126,20 @@ def save_status():
    text_file.close()
 
 def read_local_data():
-   localDataFile = "/media/2/log/"+strftime("%Y-%m_local_data.log", localtime())
-   with open(localDataFile, "rb") as f:
-      for last in f: pass
-   f.close()
-   last = last.rstrip().split()
-   return last[2] + " " + last[3]
+  EXE = "sudo /media/2/code/raspberry_lcd/dht11"
+  while True:
+    try:
+      #Read sensor data twice to refresh data
+      output=subprocess.check_output(EXE, shell=True)
+      output=subprocess.check_output(EXE, shell=True)
+      #Parse local data
+      ldata = output.split()
+      #Stop loop
+      break
+    except:
+      #If sensor reading fail, try again
+      continue
+  return ldata[0] + " " + ldata[1]
 
 def get_status():
    global lightStatus
