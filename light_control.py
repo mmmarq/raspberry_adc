@@ -139,7 +139,7 @@ def read_local_data():
     except:
       #If sensor reading fail, try again
       continue
-  return ldata[0] + " " + ldata[1]
+  return ldata[1] + " " + ldata[0]
 
 def get_status():
    global lightStatus
