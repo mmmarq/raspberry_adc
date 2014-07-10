@@ -60,7 +60,7 @@ configFileName = "light_control.cfg"
 PUB_KEY = "/home/pi/.keys/public"
 PVT_KEY = "/home/pi/.keys/private"
 SGN_KEY = "/home/pi/.keys/signkeys"
-PASS_PHRASE = "VHXxsMvdwrwoml7r44pxzE3iUuI"
+PASS_PHRASE = "/home/pi/.keys/passphrase"
 
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
@@ -94,6 +94,15 @@ def read_light_meter(device,channel):
    output = p1.communicate()[0]
    p1.stdout.close()
    return output
+
+def read_pass_phrase():
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
+   if not os.path.isfile(PASS_PHRASE):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Pass phrase file not found")
+      return ""
+   with open(PASS_PHRASE) as f:
+      content = f.readline()
+      return content
 
 def read_status():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
@@ -266,6 +275,9 @@ def light_server():
    decrypter = keyczar.Crypter.Read(PVT_KEY)
    signer = keyczar.UnversionedSigner.Read(SGN_KEY)
 
+   #Read pass_phrase
+   pass_phrase = read_pass_phrase()
+
    #Create a socket object
    s = socket.socket()
    #Get local machine name
@@ -335,8 +347,8 @@ def light_server():
          elif re.match('^gate.open\|.+',msg) is not None:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
             passcode = msg.split('|')[1]
-            HASH = signer.Sign(passcode) 
-            if ( PASS_PHRASE == HASH):
+            rcvd_hash = signer.Sign(passcode)
+            if (pass_phrase == rcvd_hash):
             	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
             	gate_opener(gatePin)
             	c.send(crypter.Encrypt('ok'))
