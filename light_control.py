@@ -102,7 +102,7 @@ def read_pass_phrase():
       return ""
    with open(PASS_PHRASE) as f:
       content = f.readline()
-      return content
+      return content.rstrip()
 
 def read_status():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
