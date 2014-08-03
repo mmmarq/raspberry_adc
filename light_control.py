@@ -128,7 +128,7 @@ def save_status():
       os.makedirs(configFileFolder)
    if os.path.isfile(os.path.join(configFileFolder,configFileName)):
       os.remove(os.path.join(configFileFolder,configFileName))
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current statis")
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
    text_file = open(os.path.join(configFileFolder,configFileName), "w")
    status = get_status()
    text_file.write("%s" % status)
@@ -250,12 +250,13 @@ def light_control():
          
          #If ligh is on, turn light off
          if ( lightStatus ):
-         	  logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
-         	  #If light level bigger than trigger and light on, turn light off
-         	  turn_light_off(lightPin)
-            #Since adc return value can vary easily, wait little more time to next loop
-         #Save config file
-         save_status()
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
+            #If light level bigger than trigger and light on, turn light off
+            turn_light_off(lightPin)
+            #Save config file
+            save_status()
+
+         #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(300) #sleep 10 minutes
 
       #Just wait a while before start next loop iteration
