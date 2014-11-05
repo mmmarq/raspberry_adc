@@ -8,6 +8,7 @@ from keyczar import keyczart
 from keyczar.errors import KeyczarError
 from keyczar.errors import KeyNotFoundError
 from time import localtime, strftime
+from optparse import OptionParser
 import os
 import traceback
 import getopt
