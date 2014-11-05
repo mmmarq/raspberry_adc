@@ -1,0 +1,32 @@
+#! /bin/sh
+# /etc/init.d/light_requester_starter
+
+# You need to register your script to run at boot
+# sudo update-rc.d light_requester_starter defaults
+
+# To remove it from boot:
+# sudo update-rc.d -f light_requester_starter remove
+
+# Carry out specific functions when asked to by the system
+case "$1" in
+  start)
+    echo "Starting light_requester.py"
+    (sleep 60;/media/2/code/raspberry_adc/light_control.py --log /media/2/log/light_control.log)&
+    ;;
+  stop)
+    echo "Stopping light_requester.py"
+    sudo killall light_requester.py
+    ;;
+  restart)
+    echo "Stopping light_requester.py"
+    sudo killall light_requester.py
+    echo "Starting light_requester.py"
+    sudo /media/2/code/raspberry_adc/light_requester.py --log /media/2/log/light_control.log &
+    ;;
+  *)
+    echo "Usage: /etc/init.d/light_requester_starter {start|stop|restart}"
+    exit 1
+    ;;
+esac
+
+exit 0
