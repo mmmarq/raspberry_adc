@@ -303,6 +303,9 @@ def light_server():
    #Set connection status false (not connected)
    isConnected = False
 
+   #Now wait for server requests.
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for server requests...")
+
    while True:
       try:
          if isConnected == False:
@@ -314,9 +317,6 @@ def light_server():
             isConnected = True
             #Set socket timeout
             s.settimeout(60)
-
-         #Now wait for server requests.
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for server requests...")
 
          msg = ''
          #Read server requests
