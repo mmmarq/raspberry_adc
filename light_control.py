@@ -313,7 +313,7 @@ def light_server():
             s.send(master_crypter.Encrypt(master_phrase))
             isConnected = True
             #Set socket timeout
-            s.settimeout(10)
+            s.settimeout(60)
 
          #Now wait for server requests.
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for server requests...")
@@ -383,9 +383,9 @@ def light_server():
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             s.sendall(crypter.Encrypt('fail'))
       except:
-         logging.info(traceback.format_exc())
-         #Set connection false
+         #logging.info(traceback.format_exc())
          s.close()
+         #Set connection false
          isConnected = False
          time.sleep(10)
          continue
