@@ -48,9 +48,9 @@ i2cget = "/usr/sbin/i2cget"
 #gpio command full path
 gpio = "/usr/local/bin/gpio"
 #Server port number
-portNum = 4055
+PORTNUM = 4055
 #Server IP address
-ipAddr = "192.168.0.2"
+HOST = "192.168.0.2"
 #Config file folder
 configFileFolder = "/media/2/log"
 #Config file name
@@ -61,6 +61,16 @@ PUB_KEY = "/home/pi/.keys/public"
 PVT_KEY = "/home/pi/.keys/private"
 SGN_KEY = "/home/pi/.keys/signkeys"
 PASS_PHRASE = "/home/pi/.keys/passphrase"
+MASTER_PHRASE = "/home/pi/.keys/masterphrase"
+MASTER_PUB_KEY="/home/pi/.keys/master_public"
+
+# Test Environment
+#PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
+#PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
+#SGN_KEY = "/Users/wmm125/.ssh/raspberry/keys/signkeys"
+#PASS_PHRASE = "/Users/wmm125/.ssh/raspberry/keys/passphrase"
+#MASTER_PHRASE = "/Users/wmm125/.ssh/raspberry/keys/masterphrase"
+#MASTER_PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/master_public"
 
 #Function to call turn_light_off by alarm signal
 def handler_light_off(signum, frame):
@@ -102,7 +112,16 @@ def read_pass_phrase():
       return ""
    with open(PASS_PHRASE) as f:
       content = f.readline()
-      return content.rstrip()
+      return content.strip()
+
+def read_master_phrase():
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading master phrase file")
+   if not os.path.isfile(MASTER_PHRASE):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Master phrase file not found")
+      return ""
+   with open(MASTER_PHRASE) as f:
+      content = f.readline()
+      return content.strip()
 
 def read_status():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
@@ -135,20 +154,21 @@ def save_status():
    text_file.close()
 
 def read_local_data():
-  EXE = "sudo /media/2/code/raspberry_lcd/dht11"
-  while True:
-    try:
-      #Read sensor data twice to refresh data
-      output=subprocess.check_output(EXE, shell=True)
-      output=subprocess.check_output(EXE, shell=True)
-      #Parse local data
-      ldata = output.split()
-      #Stop loop
-      break
-    except:
-      #If sensor reading fail, try again
-      continue
-  return ldata[1] + " " + ldata[0]
+   ldata = ()
+   EXE = "sudo /media/2/code/raspberry_lcd/dht11"
+   while True:
+     try:
+       #Read sensor data twice to refresh data
+       output=subprocess.check_output(EXE, shell=True)
+       output=subprocess.check_output(EXE, shell=True)
+       #Parse local data
+       ldata = output.split()
+       #Stop loop
+       break
+     except:
+       #If sensor reading fail, try again
+       continue
+   return ldata[1] + " " + ldata[0]
 
 def get_status():
    global lightStatus
@@ -188,7 +208,7 @@ def light_control():
    global lightStatus
    global mySleep
 
-   #Variable to make this thread turn light on automaticaly only next day
+   #Variable to make this thread turn light on automatically only next day
    mySleep = False
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
@@ -219,8 +239,8 @@ def light_control():
    #Keep it running forever
    while True:
       #Read ADC light meter value and test
-      #only if there is no light enough outsidec(check minLightLevel)
-      #light is not alread on (lightStatus)
+      #only if there is no light enough outside(check minLightLevel)
+      #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
       if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation and not mySleep ):
@@ -253,9 +273,8 @@ def light_control():
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
             #If light level bigger than trigger and light on, turn light off
             turn_light_off(lightPin)
-            #Save config file
-            save_status()
-
+         #Save config file
+         save_status()
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(300) #sleep 10 minutes
 
@@ -275,31 +294,32 @@ def light_server():
    crypter = keyczar.Encrypter.Read(PUB_KEY)
    decrypter = keyczar.Crypter.Read(PVT_KEY)
    signer = keyczar.UnversionedSigner.Read(SGN_KEY)
+   master_crypter = keyczar.Encrypter.Read(MASTER_PUB_KEY)
 
    #Read pass_phrase
    pass_phrase = read_pass_phrase()
+   master_phrase = read_master_phrase()
 
-   #Create a socket object
-   s = socket.socket()
-   #Get local machine name
-   host = socket.gethostbyname(ipAddr)
-   #Bind to the port
-   s.bind((host, portNum))
-
-   #Now wait for client connection.
-   s.listen(2)
-
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connection...")
+   #Set connection status false (not connected)
+   isConnected = False
 
    while True:
       try:
-         #Establish connection with client.
-         c, addr = s.accept()
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Got connection from " + str(addr))
+         if isConnected == False:
+            #Create socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #Connect to server
+            s.connect((HOST, PORTNUM))
+            s.send(master_crypter.Encrypt(master_phrase))
+            isConnected = True
+
+         #Now wait for server requests.
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for server requests...")
+
          msg = ''
-      
+         #Read server requests
          while len(msg) < MSGLEN:
-            chunk = c.recv(MSGLEN-len(msg))
+            chunk = s.recv(MSGLEN-len(msg))
             if chunk == '':
                 raise RuntimeError("socket connection broken")
             msg = msg + chunk
@@ -309,7 +329,7 @@ def light_server():
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Full status requested")
             status = get_status()
             logging.info("Send: " + status)
-            c.send(crypter.Encrypt(status))
+            s.send(crypter.Encrypt(status))
             logging.info("Message sent!")
          elif ( msg == "light.on" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
@@ -320,7 +340,7 @@ def light_server():
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             signal.alarm(int(timeFrame.total_seconds()))
             save_status()
-            c.send(crypter.Encrypt(get_status()))
+            s.send(crypter.Encrypt(get_status()))
          elif ( msg == "light.off" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
             turn_light_off(lightPin)
@@ -328,13 +348,13 @@ def light_server():
             mySleep = True
             signal.alarm(0)
             save_status()
-            c.send(crypter.Encrypt(get_status()))
+            s.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.manual" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
             manualOperation = True
             signal.alarm(0)
             save_status()
-            c.send(crypter.Encrypt(get_status()))
+            s.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.automatic" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
             manualOperation = False
@@ -344,28 +364,28 @@ def light_server():
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
                signal.alarm(int(timeFrame.total_seconds()))
             save_status()
-            c.send(crypter.Encrypt(get_status()))
+            s.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
             passcode = msg.split('|')[1]
             rcvd_hash = signer.Sign(passcode)
             if (pass_phrase == rcvd_hash):
-            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
-            	gate_opener(gatePin)
-            	c.send(crypter.Encrypt('ok'))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
+               gate_opener(gatePin)
+               s.send(crypter.Encrypt('ok'))
             else:
-            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
-            	c.send(crypter.Encrypt('fail'))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
+               s.send(crypter.Encrypt('fail'))
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
-            c.send(crypter.Encrypt('fail'))
+            s.sendall(crypter.Encrypt('fail'))
       except:
          logging.info(traceback.format_exc())
-         c.close()
+         #Set connection false
+         s.close()
+         isConnected = False
+         time.sleep(10)
          continue
-      #Close the connection
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Connection closed!")
-      c.close()
 
 def main():
 
@@ -400,7 +420,7 @@ def main():
    p2.start()
    
    while True:
-   	 time.sleep(5)
+      time.sleep(5)
 
 if __name__ == '__main__':
    main()

@@ -9,23 +9,31 @@ from keyczar.errors import KeyczarError
 
 def main():
 
-   PUB_KEY = "/home/pi/.keys/public"
-   PVT_KEY = "/home/pi/.keys/private"
+   _PUB_KEY = "/home/pi/.keys/public"
+   _PVT_KEY = "/home/pi/.keys/private"
 
-   MSGLEN = 690
-   
+   #Test environment
+   #_PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
+   #_PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
+
+   _MSGLEN = 690
+
+   _HOST = '192.168.0.2'        # Symbolic name meaning all available interfaces
+   _PORT = 4055                 # Arbitrary non-privileged port
+
+
    print "Loading Private/Public keys.."
-   crypter = keyczar.Encrypter.Read(PUB_KEY)
-   decrypter = keyczar.Crypter.Read(PVT_KEY)
+   crypter = keyczar.Encrypter.Read(_PUB_KEY)
+   decrypter = keyczar.Crypter.Read(_PVT_KEY)
 
    print "starting client..."
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostbyname("192.168.0.2")
+   host = socket.gethostbyname(_HOST)
    print host
    #Reserve a port for your service.
-   port = 4055
+   port = _PORT
 
    s.connect((host, port))
 
@@ -39,8 +47,8 @@ def main():
       s.send(data)
       print "Waiting response..."
       msg = ''
-      while len(msg) < MSGLEN:
-         chunk = s.recv(MSGLEN-len(msg))
+      while len(msg) < _MSGLEN:
+         chunk = s.recv(_MSGLEN-len(msg))
          if chunk == '':
             raise RuntimeError("socket connection broken")
          msg = msg + chunk
