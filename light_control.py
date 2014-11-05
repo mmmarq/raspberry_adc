@@ -312,6 +312,8 @@ def light_server():
             s.connect((HOST, PORTNUM))
             s.send(master_crypter.Encrypt(master_phrase))
             isConnected = True
+            #Set socket timeout
+            s.settimeout(2)
 
          #Now wait for server requests.
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for server requests...")
@@ -319,7 +321,13 @@ def light_server():
          msg = ''
          #Read server requests
          while len(msg) < MSGLEN:
-            chunk = s.recv(MSGLEN-len(msg))
+
+            try:
+               #chunk = s.recv(MSGLEN-len(msg))
+               chunk = s.recv(2)
+            #Catch socket timeout exception
+            except socket.timeout:
+               continue
             if chunk == '':
                 raise RuntimeError("socket connection broken")
             msg = msg + chunk
