@@ -28,8 +28,8 @@ _PUB_KEY = "/home/pi/.keys/public"
 
 _MSGLEN = 690
 
-_HOST = '127.0.0.1'        # Symbolic name meaning all available interfaces
-_PORT = 4055               # Arbitrary non-privileged port
+_HOST = 'mmmarq.dnsdynamic.net' # Symbolic name meaning all available interfaces
+_PORT = 4055                    # Arbitrary non-privileged port
 
 def read_master_phrase():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading master pass phrase file")

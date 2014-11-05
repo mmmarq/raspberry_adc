@@ -9,17 +9,17 @@ from keyczar.errors import KeyczarError
 
 def main():
 
-   _PUB_KEY = "/home/pi/.keys/public"
-   _PVT_KEY = "/home/pi/.keys/private"
+   #_PUB_KEY = "/home/pi/.keys/public"
+   #_PVT_KEY = "/home/pi/.keys/private"
 
    #Test environment
-   #_PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
-   #_PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
+   _PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
+   _PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
 
    _MSGLEN = 690
 
-   _HOST = '192.168.0.2'        # Symbolic name meaning all available interfaces
-   _PORT = 4055                 # Arbitrary non-privileged port
+   _HOST = 'mmmarq.dnsdynamic.net' # Symbolic name meaning all available interfaces
+   _PORT = 4055                    # Arbitrary non-privileged port
 
 
    print "Loading Private/Public keys.."
