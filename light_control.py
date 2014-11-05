@@ -50,7 +50,7 @@ gpio = "/usr/local/bin/gpio"
 #Server port number
 PORTNUM = 4055
 #Server IP address
-HOST = "192.168.0.2"
+HOST = "mmmarq.dnsdynamic.net"
 #Config file folder
 configFileFolder = "/media/2/log"
 #Config file name
