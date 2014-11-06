@@ -9,6 +9,7 @@ from keyczar.errors import KeyczarError
 from keyczar.errors import KeyNotFoundError
 from time import localtime, strftime
 from optparse import OptionParser
+import time
 import os
 import traceback
 import getopt
@@ -145,6 +146,7 @@ def main():
          sock.bind((_HOST, _PORT))
          break
       except socket.error:
+         time.sleep(2)
          continue
    sock.listen(2)
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Calling server function!")
