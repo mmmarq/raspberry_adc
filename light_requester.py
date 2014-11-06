@@ -13,9 +13,12 @@ import os
 import traceback
 import getopt
 import logging
+import signal
+import sys
 
 #Log file name
 logFile = ""
+sock = socket
 
 _MASTER_PHRASE = "/home/pi/.keys/masterphrase"
 _MASTER_PVT_KEY = "/home/pi/.keys/master_private"
@@ -40,7 +43,7 @@ def read_master_phrase():
       content = f.readline()
       return content.strip()
 
-def server_thread(sock):
+def server_start():
    rpic = None
    master_phrase = read_master_phrase()
 
@@ -113,8 +116,14 @@ def server_thread(sock):
          c.close()
          continue
 
-def main():
+def signal_term_handler(signal, frame):
+    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Got SIGTERM, closing socket!")
+    sock.shutdown()
+    sock.close()
+    sys.exit(0)
 
+def main():
+   global sock
    global logFile
 
    parser = OptionParser()
@@ -125,16 +134,20 @@ def main():
 
    logging.basicConfig(filename=options.logFileName,level=logging.INFO)
 
-   #Log start
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Requester process!")
-
+   #Set SIGTERM response
+   signal.signal(signal.SIGTERM, signal_term_handler)
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating Light Requester Network Socket!")
    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-   s.bind((_HOST, _PORT))
+   while True:
+      try:
+         s.bind((_HOST, _PORT))
+         break
+      except:
+         continue
    s.listen(2)
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Calling server function!")
-   server_thread(s)
+   server_start()
 
 if __name__ == '__main__':
    main()

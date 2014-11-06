@@ -11,17 +11,18 @@
 case "$1" in
   start)
     echo "Starting light_requester.py"
-    (sleep 60;/media/2/code/raspberry_adc/light_control.py --log /media/2/log/light_requester.log)&
+    sleep 60 ; /media/2/code/raspberry_adc/light_control.py --log /media/2/log/light_requester.log
     ;;
   stop)
     echo "Stopping light_requester.py"
-    sudo killall light_requester.py
+    killall light_requester.py
     ;;
   restart)
     echo "Stopping light_requester.py"
-    sudo killall light_requester.py
+    killall light_requester.py
+    sleep 2
     echo "Starting light_requester.py"
-    sudo /media/2/code/raspberry_adc/light_requester.py --log /media/2/log/light_requester.log &
+    /media/2/code/raspberry_adc/light_requester.py --log /media/2/log/light_requester.log
     ;;
   *)
     echo "Usage: /etc/init.d/light_requester_starter {start|stop|restart}"
