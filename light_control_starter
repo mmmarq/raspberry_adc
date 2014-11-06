@@ -15,11 +15,11 @@ case "$1" in
     ;;
   stop)
     echo "Stopping light_control.py"
-    sudo killall light_control.py
+    sudo killall -9 light_control.py
     ;;
   restart)
     echo "Stopping light_control.py"
-    sudo killall light_control.py
+    sudo killall -9 light_control.py
     echo "Starting light_control.py"
     sudo /media/2/code/raspberry_adc/light_control.py --log /media/2/log/light_control.log &
     ;;
