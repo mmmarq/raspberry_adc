@@ -138,14 +138,14 @@ def main():
    signal.signal(signal.SIGTERM, signal_term_handler)
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating Light Requester Network Socket!")
-   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
    while True:
       try:
-         s.bind((_HOST, _PORT))
+         sock.bind((_HOST, _PORT))
          break
       except:
          continue
-   s.listen(2)
+   sock.listen(2)
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Calling server function!")
    server_start()
 
