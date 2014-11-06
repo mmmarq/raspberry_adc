@@ -51,9 +51,10 @@ def server_start():
    decrypter = keyczar.Crypter.Read(_MASTER_PVT_KEY)
    crypter = keyczar.Encrypter.Read(_PUB_KEY)
 
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connections...")
+
    while True:
       try:
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connections...")
          c, addr = sock.accept()
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Got connection from " + str(addr))
 
@@ -64,7 +65,7 @@ def server_start():
             chunk = c.recv(_MSGLEN-len(msg))
             if chunk == '':
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - socket connection broken")
-               raise RuntimeError("socket connection broken")
+               raise socket.error("socket connection broken")
             msg = msg + chunk
 
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Got message from client.")
@@ -99,7 +100,7 @@ def server_start():
                   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - socket connection broken")
                   raise RuntimeError("socket connection broken")
                msg = msg + chunk
-         except:
+         except socket.error:
             rpic = None
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Raspi connection broken")
             c.send(crypter.Encrypt("ServerNotFound"))
@@ -110,7 +111,7 @@ def server_start():
          c.send(msg)
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Closing connection.")
          c.close()
-      except:
+      except socket.error:
          print traceback.format_exc()
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Connection broken!")
          c.close()
@@ -118,7 +119,7 @@ def server_start():
 
 def signal_term_handler(signal, frame):
     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Got SIGTERM, closing socket!")
-    sock.shutdown()
+    sock.shutdown(socket.SHUT_RDWR)
     sock.close()
     sys.exit(0)
 
@@ -143,7 +144,7 @@ def main():
       try:
          sock.bind((_HOST, _PORT))
          break
-      except:
+      except socket.error:
          continue
    sock.listen(2)
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Calling server function!")
