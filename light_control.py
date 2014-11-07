@@ -135,20 +135,21 @@ def save_status():
    text_file.close()
 
 def read_local_data():
-  EXE = "sudo /media/2/code/raspberry_lcd/dht11"
-  while True:
-    try:
-      #Read sensor data twice to refresh data
-      output=subprocess.check_output(EXE, shell=True)
-      output=subprocess.check_output(EXE, shell=True)
-      #Parse local data
-      ldata = output.split()
-      #Stop loop
-      break
-    except:
-      #If sensor reading fail, try again
-      continue
-  return ldata[1] + " " + ldata[0]
+   ldata = []
+   EXE = "sudo /media/2/code/raspberry_lcd/dht11"
+   while True:
+     try:
+       #Read sensor data twice to refresh data
+       output=subprocess.check_output(EXE, shell=True)
+       output=subprocess.check_output(EXE, shell=True)
+       #Parse local data
+       ldata = output.split()
+       #Stop loop
+       break
+     except:
+       #If sensor reading fail, try again
+       continue
+   return ldata[1] + " " + ldata[0]
 
 def get_status():
    global lightStatus
@@ -188,7 +189,7 @@ def light_control():
    global lightStatus
    global mySleep
 
-   #Variable to make this thread turn light on automaticaly only next day
+   #Variable to make this thread turn light on automatically only next day
    mySleep = False
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
@@ -219,8 +220,8 @@ def light_control():
    #Keep it running forever
    while True:
       #Read ADC light meter value and test
-      #only if there is no light enough outsidec(check minLightLevel)
-      #light is not alread on (lightStatus)
+      #only if there is no light enough outside(check minLightLevel)
+      #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
       if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation and not mySleep ):
@@ -241,7 +242,7 @@ def light_control():
          signal.alarm(0)
          #Set manual operation fasle (no)
          if ( manualOperation ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual opration false.")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual operation false.")
             manualOperation = False
          #Set sleep false in order to enable light turn on next night
          if ( mySleep ):
@@ -350,12 +351,12 @@ def light_server():
             passcode = msg.split('|')[1]
             rcvd_hash = signer.Sign(passcode)
             if (pass_phrase == rcvd_hash):
-            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
-            	gate_opener(gatePin)
-            	c.send(crypter.Encrypt('ok'))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
+               gate_opener(gatePin)
+               c.send(crypter.Encrypt('ok'))
             else:
-            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
-            	c.send(crypter.Encrypt('fail'))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
+               c.send(crypter.Encrypt('fail'))
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
@@ -400,7 +401,7 @@ def main():
    p2.start()
    
    while True:
-   	 time.sleep(5)
+      time.sleep(5)
 
 if __name__ == '__main__':
    main()

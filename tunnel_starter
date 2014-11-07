@@ -1,0 +1,22 @@
+#! /bin/sh
+
+# This command check if persistent ssh tunnel is active. If not, create new one
+
+#Before start tunnel, add following option into server ssh_config file:
+
+#TCPKeepAlive yes
+#ClientAliveInterval 30
+#ClientAliveCountMax 99999
+#GatewayPorts yes
+
+# Then, add this script in crontab:
+
+#* * * * * /path/to/your/script/launch-reverse-ssh-tunneling.shtunnel_starter
+
+# 4055 - Home Control port number
+# 9091 - Transmission web port
+
+mypid=(`ps -ef | grep -v autossh | egrep 'ssh.+:4055’ | grep -v grep`)
+if [ ! "$mypid" ]; then
+    autossh -M 0 -f -N -R *:4055:localhost:4055 -R *:9091:localhost:9091 mmmarqaws.dnsdynamic.net
+fi
