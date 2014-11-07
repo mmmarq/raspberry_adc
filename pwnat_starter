@@ -1,0 +1,33 @@
+#! /bin/sh
+# /etc/init.d/pwnat_starter
+
+# You need to register your script to run at boot
+# sudo update-rc.d pwnat_starter defaults
+
+# To remove it from boot:
+# sudo update-rc.d -f pwnat_starter remove
+
+# Carry out specific functions when asked to by the system
+case "$1" in
+  start)
+    echo "Starting pwnat"
+    sudo /home/pi/bin/pwnat -s &
+    ;;
+  stop)
+    echo "Stopping pwnat"
+    sudo killall -9 pwnat
+    ;;
+  restart)
+    echo "Stopping pwnat"
+    sudo killall -9 pwnat
+    echo "Starting pwnat"
+    sudo /home/pi/bin/pwnat -s &
+    ;;
+  *)
+    echo "Usage: /etc/init.d/pwnat_starter {start|stop|restart}"
+    exit 1
+    ;;
+esac
+
+exit 0
+

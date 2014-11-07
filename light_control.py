@@ -135,6 +135,7 @@ def save_status():
    text_file.close()
 
 def read_local_data():
+  ldata = []
   EXE = "sudo /media/2/code/raspberry_lcd/dht11"
   while True:
     try:
@@ -188,7 +189,7 @@ def light_control():
    global lightStatus
    global mySleep
 
-   #Variable to make this thread turn light on automaticaly only next day
+   #Variable to make this thread turn light on automatically only next day
    mySleep = False
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
@@ -239,9 +240,9 @@ def light_control():
       if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) ):
          #Remove any existing alarm
          signal.alarm(0)
-         #Set manual operation fasle (no)
+         #Set manual operation false (no)
          if ( manualOperation ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual opration false.")
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual operation false.")
             manualOperation = False
          #Set sleep false in order to enable light turn on next night
          if ( mySleep ):
@@ -350,12 +351,12 @@ def light_server():
             passcode = msg.split('|')[1]
             rcvd_hash = signer.Sign(passcode)
             if (pass_phrase == rcvd_hash):
-            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
-            	gate_opener(gatePin)
-            	c.send(crypter.Encrypt('ok'))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
+               gate_opener(gatePin)
+               c.send(crypter.Encrypt('ok'))
             else:
-            	logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
-            	c.send(crypter.Encrypt('fail'))
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
+               c.send(crypter.Encrypt('fail'))
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
@@ -400,7 +401,7 @@ def main():
    p2.start()
    
    while True:
-   	 time.sleep(5)
+      time.sleep(5)
 
 if __name__ == '__main__':
    main()

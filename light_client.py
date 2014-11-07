@@ -9,8 +9,13 @@ from keyczar.errors import KeyczarError
 
 def main():
 
-   PUB_KEY = "/home/pi/.keys/public"
-   PVT_KEY = "/home/pi/.keys/private"
+   #PUB_KEY = "/home/pi/.keys/public"
+   #PVT_KEY = "/home/pi/.keys/private"
+
+   #Test environment
+   PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
+   PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
+
 
    MSGLEN = 690
    
@@ -22,10 +27,11 @@ def main():
    #Create a socket object
    s = socket.socket()
    #Get local machine name
-   host = socket.gethostbyname("192.168.0.2")
+   #host = socket.gethostbyname("192.168.0.2")
+   host = socket.gethostbyname("127.0.0.1")
    print host
    #Reserve a port for your service.
-   port = 4055
+   port = 8000
 
    s.connect((host, port))
 
