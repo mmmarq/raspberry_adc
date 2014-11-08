@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/bash
 
 # This command check if persistent ssh tunnel is active. If not, create new one
 
@@ -16,7 +16,7 @@
 # 4055 - Home Control port number
 # 9091 - Transmission web port
 
-mypid=(`ps -ef | grep -v autossh | egrep 'ssh.+:4055’ | grep -v grep`)
+mypid=(`ps -ef | grep -v grep | egrep -e 'autossh.+:4055'`)
 if [ ! "$mypid" ]; then
     autossh -M 0 -f -N -R *:4055:localhost:4055 -R *:9091:localhost:9091 mmmarqaws.dnsdynamic.net
 fi
