@@ -29,7 +29,7 @@ def main():
    host = socket.gethostbyname("mmmarq.dnsdynamic.net")
    print host
    #Reserve a port for your service.
-   port = 4055
+   port = 50004
 
    s.connect((host, port))
 

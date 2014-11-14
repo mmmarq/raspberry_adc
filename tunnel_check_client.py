@@ -27,7 +27,7 @@ except:
 if _MSG != data:
    print "Restarting ssh service..."
    try:
-      sshpid = subprocess.check_output("sudo lsof -i 4 -n | grep sshd | grep *:4055 | grep -v grep", shell=True).split()[1]
+      sshpid = subprocess.check_output("sudo lsof -i 4 -n | grep sshd | grep :1980 | grep -v grep", shell=True).split()[1]
    except:
       sshpid = ''
 

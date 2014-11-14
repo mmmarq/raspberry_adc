@@ -16,9 +16,9 @@
 # 4055 - Home Control port number
 # 1976 - Transmission web port
 
-sshpid=(`ps -ef | grep -v grep | egrep -e 'autossh.+:4055'`)
+sshpid=(`ps -ef | grep -v grep | egrep -e 'autossh.*:1980'`)
 if [ ! "$sshpid" ]; then
-    sudo autossh -M 0 -f -N -R *:4055:192.168.0.2:4055 -R *:1976:192.168.0.2:1976 -R 1980:192.168.0.2:1980 -R 2222:192.168.0.2:22 mmmarq.dnsdynamic.net
+    sudo autossh -M 0 -f -N -R 1980:192.168.0.2:1980 -R 2222:192.168.0.2:22 mmmarq.dnsdynamic.net
 fi
 
 chkpid=(`ps -ef | grep -v grep | grep tunnel_check_server.py`)

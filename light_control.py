@@ -48,7 +48,7 @@ i2cget = "/usr/sbin/i2cget"
 #gpio command full path
 gpio = "/usr/local/bin/gpio"
 #Server port number
-portNum = 4055
+portNum = 50004
 #Server IP address
 ipAddr = "192.168.0.2"
 #Config file folder
