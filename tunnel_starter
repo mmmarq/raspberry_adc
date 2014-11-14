@@ -11,12 +11,18 @@
 
 # Then, add this script in crontab:
 
-#* * * * * /path/to/your/script/launch-reverse-ssh-tunneling.shtunnel_starter
+#* * * * * /path/to/your/script/tunnel_starter
 
 # 4055 - Home Control port number
 # 1976 - Transmission web port
 
-mypid=(`ps -ef | grep -v grep | egrep -e 'autossh.+:4055'`)
-if [ ! "$mypid" ]; then
-    sudo autossh -M 0 -f -N -R *:4055:192.168.0.2:4055 -R *:1976:192.168.0.2:1976 -R 2222:192.168.0.2:22 mmmarq.dnsdynamic.net
+sshpid=(`ps -ef | grep -v grep | egrep -e 'autossh.+:4055'`)
+if [ ! "$sshpid" ]; then
+    sudo autossh -M 0 -f -N -R *:4055:192.168.0.2:4055 -R *:1976:192.168.0.2:1976 -R 1980:192.168.0.2:1980 -R 2222:192.168.0.2:22 mmmarq.dnsdynamic.net
 fi
+
+chkpid=(`ps -ef | grep -v grep | grep tunnel_check_server.py`)
+if [ ! "$chkpid" ]; then
+    $(dirname $0)/tunnel_check_server.py
+fi
+
