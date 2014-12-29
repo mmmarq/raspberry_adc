@@ -182,7 +182,7 @@ def turn_light_off(lightPin):
 
 def init_gpio(pinList):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Seting up pin!")
-   GPIO.cleanup()
+   GPIO.setwarnings(False)
    GPIO.setmode(GPIO.BCM)
    GPIO.setup(pinList, GPIO.OUT)
    GPIO.output(pinList, False)
