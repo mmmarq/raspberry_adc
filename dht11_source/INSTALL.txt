@@ -1,0 +1,6 @@
+git clone git://git.drogon.net/wiringPi
+cd wiringPi/
+./build
+
+gcc -Wall -o dht11 dht11.c -lwiringPi
+

@@ -22,6 +22,7 @@ from keyczar import keyczar
 from keyczar import keyczart
 from keyczar.errors import KeyczarError
 from optparse import OptionParser
+import RPi.GPIO as GPIO
 
 #Log file name
 logFile = ""
@@ -45,8 +46,6 @@ gatePin = "26"
 gateSignalLenght = 0.5
 #i2cget command full path
 i2cget = "/usr/sbin/i2cget"
-#gpio command full path
-gpio = "/usr/local/bin/gpio"
 #Server port number
 portNum = 50004
 #Server IP address
@@ -78,9 +77,9 @@ def handler_light_off(signum, frame):
 
 def gate_opener(gatePin):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate opened!!!")
-   subprocess.call([gpio,"-g","write",gatePin,"1"])
+   GPIO.output(gatePin, True)
    time.sleep(gateSignalLenght)
-   subprocess.call([gpio,"-g","write",gatePin,"0"])   
+   GPIO.output(gatePin, False)
 
 def read_light_meter(device,channel):
    #Set default ADC channel
@@ -136,7 +135,10 @@ def save_status():
 
 def read_local_data():
    ldata = []
-   EXE = "sudo /media/2/code/raspberry_lcd/dht11"
+
+   dirname, filename = os.path.split(os.path.abspath(__file__))
+   EXE = "sudo " + dirname + "/dht11"
+
    while True:
      try:
        #Read sensor data twice to refresh data
@@ -169,20 +171,20 @@ def get_status():
 def turn_light_on(lightPin):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
-   subprocess.call([gpio,"-g","write",lightPin,"1"])
+   GPIO.output(lightPin, True)
    lightStatus = True
 
 def turn_light_off(lightPin):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!")
-   subprocess.call([gpio,"-g","write",lightPin,"0"])
+   GPIO.output(lightPin, False)
    lightStatus = False
 
-def init_gpio(lightPin,gatePin):
+def init_gpio(pinList):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Seting up pin!")
-   for pin in (lightPin,gatePin):
-      subprocess.call([gpio,"-g","mode",pin,"out"])
-      subprocess.call([gpio,"-g","write",pin,"0"])
+   GPIO.setmode(GPIO.BCM)
+   GPIO.setup(pinList, GPIO.OUT)
+   GPIO.output(pinList, False)
 
 def light_control():
    global manualOperation
@@ -258,7 +260,7 @@ def light_control():
             save_status()
 
          #Since adc return value can vary easily, wait little more time to next loop
-         time.sleep(300) #sleep 10 minutes
+         time.sleep(300) #sleep 5 minutes
 
       #Just wait a while before start next loop iteration
       time.sleep(10)
@@ -388,7 +390,7 @@ def main():
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio(lightPin,gatePin)
+   init_gpio([lightPin,gatePin])
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
@@ -402,6 +404,8 @@ def main():
    
    while True:
       time.sleep(5)
+
+   GPIO.cleanup()
 
 if __name__ == '__main__':
    main()
