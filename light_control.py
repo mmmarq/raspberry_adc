@@ -35,13 +35,13 @@ adcPin = "0x03"
 #Light level to trigger light_on
 minLightLevel = "0x70"
 #GPIO pin to control light relay
-lightPin = "25"
+lightPin = 25
 #Control light status
 lightStatus = False
 #Control if light meter should sleep
 mySleep = False
 #GPIO pin to open gate
-gatePin = "26"
+gatePin = 26
 #Gate signal lenght
 gateSignalLenght = 0.5
 #i2cget command full path
@@ -390,7 +390,7 @@ def main():
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio([lightPin,gatePin])
+   init_gpio((lightPin,gatePin))
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
