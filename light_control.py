@@ -69,10 +69,12 @@ def handler_light_off(signum, frame):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Its time to turn lights off... See you tomorrow!")
    turn_light_off(lightPin)
    lightStatus = False
-   manualOperation = False   
-   #Set sleep true in order to trigger light on only next night
+   manualOperation = False
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level checking is going to sleep until morning.")
+   #Set sleep true in order to trigger light on only next night
    mySleep = True
+   #Save config file
+   save_status()
    signal.alarm(0)
 
 def gate_opener(gatePin):
