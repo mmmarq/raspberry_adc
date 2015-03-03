@@ -151,9 +151,9 @@ def get_status():
 
    status = srt(lightArray)[1:-1].replace(" ","")
    if ( manualOperation ):
-      status = status + "manual,"
+      status = status + "0,"
    else:
-      status = status + "automatic,"
+      status = status + "1,"
    status = status + read_sensors()
    return status
 
@@ -191,7 +191,7 @@ def light_control():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + status)
    lightArray = (int(status[0]),int(status[1]),int(status[2]),int(status[3]))
    send_data_to_arduino(lightArray_to_bit(lightArray))
-   if (status[4] == "manual"):
+   if (status[4] == "0"):
       manualOperation = True
    else:
       manualOperation = False
@@ -265,8 +265,7 @@ def light_server():
    global mySleep
    global setByProgram
 
-   onPattern = re.compile('light[0-9]+.on')
-   offPattern = re.compile('light[0-9]+.off')
+   arrayPattern = re.compile('[0-1]{5}')
 
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Network Server")
 
@@ -312,58 +311,36 @@ def light_server():
             logging.info("Send: " + status)
             c.send(crypter.Encrypt(status))
             logging.info("Message sent!")
-         elif ( msg == "light.on" ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
-            turn_light_on()
-            manualOperation = True
-            mySleep = True
-            timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(29 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-            if ( int(timeFrame.total_seconds()) < 0 ):
-               timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-               signal.alarm(int(timeFrame.total_seconds()))
-               setByProgram = False
-               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+         elif ( arrayPattern.match(msg) ):
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light status request")
+            lightArray[0] = msg[0]
+            lightArray[1] = msg[1]
+            lightArray[2] = msg[2]
+            lightArray[3] = msg[3]
+
+            if ( msg[0] == '1' or msg[1] == '1' or msg[2] == '1' or msg[3] == '1' ):
+               lightStatus = true
             else:
-               signal.alarm(int(timeFrame.total_seconds()))
-               setByProgram = True
-               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-            save_status()
-            c.send(crypter.Encrypt(get_status()))
-         elif ( msg == "light.off" ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
-            turn_light_off()
-            manualOperation = True
-            mySleep = True
-            signal.alarm(0)
-            save_status()
-            c.send(crypter.Encrypt(get_status()))
-         elif ( onPattern.match(msg) ):
-            lightArray[int(msg[5])] = 1
+               lightStatus = false
+
+            if ( msg[4] == '0' ):
+               manualOperation = True
+               signal.alarm(0)
+            else:
+               manualOperation = False
+               mySleep = False
+               if ( lightStatus ):
+                  timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(29 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+                  if ( int(timeFrame.total_seconds()) < 0 ):
+                     timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
+                     signal.alarm(int(timeFrame.total_seconds()))
+                     setByProgram = False
+                     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+                  else:
+                     signal.alarm(int(timeFrame.total_seconds()))
+                     setByProgram = True
+                     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             send_data_to_arduino(lightArray_to_bit(lightArray))
-         elif ( offPattern.match(msg) ):
-            lightArray[int(msg[5])] = 0
-            send_data_to_arduino(lightArray_to_bit(lightArray))
-         elif ( msg == "set.manual" ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
-            manualOperation = True
-            signal.alarm(0)
-            save_status()
-            c.send(crypter.Encrypt(get_status()))
-         elif ( msg == "set.automatic" ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
-            manualOperation = False
-            mySleep = False
-            if ( lightStatus ):
-               timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(29 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-               if ( int(timeFrame.total_seconds()) < 0 ):
-                  timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-                  signal.alarm(int(timeFrame.total_seconds()))
-                  setByProgram = False
-                  logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-               else:
-                  signal.alarm(int(timeFrame.total_seconds()))
-                  setByProgram = True
-                  logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             save_status()
             c.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
