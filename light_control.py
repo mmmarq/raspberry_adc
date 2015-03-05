@@ -149,12 +149,12 @@ def get_status():
    global manualOperation
    global lightArray
 
-   status = str(lightArray)[1:-1].replace(" ","")
+   status = str(lightArray)[1:-1].replace(" ","") + ","
    if ( manualOperation ):
       status = status + "0,"
    else:
       status = status + "1,"
-   status = status + "," + read_sensors()
+   status = status + read_sensors()
    return status
 
 def turn_light_on():
