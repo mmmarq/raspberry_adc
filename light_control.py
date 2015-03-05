@@ -48,7 +48,7 @@ serialPort = "/dev/ttyACM0"
 #Alarm helper
 setByProgram = True
 #Serial communication semaphore file
-lock
+lock = threading.Lock()
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -57,9 +57,9 @@ SGN_KEY = "/home/pi/.keys/signkeys"
 PASS_PHRASE = "/home/pi/.keys/passphrase"
 
 def read_pass_phrase():
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Reading pass phrase file")
    if not os.path.isfile(PASS_PHRASE):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Pass phrase file not found")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Pass phrase file not found")
       return ""
    with open(PASS_PHRASE) as f:
       content = f.readline()
@@ -78,17 +78,17 @@ def handler_light_off(signum, frame):
    global setByProgram
 
    if (setByProgram):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning external light off!")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Turning external light off!")
       lightArray[0] = 0
       send_data_to_arduino(lightArray_to_binary(lightArray),True)
       setByProgram = False
       signal.alarm(1800)
    else:
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Its time to turn lights off... See you tomorrow!")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Its time to turn lights off... See you tomorrow!")
       turn_light_off()
       lightStatus = False
       manualOperation = False
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level checking is going to sleep until next morning.")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light level checking is going to sleep until next morning.")
       #Set sleep true in order to trigger light on only next night
       mySleep = True
       signal.alarm(0)
@@ -100,50 +100,49 @@ def handler_light_off(signum, frame):
 def send_data_to_arduino(data,log):
    global lock
    lock.acquire()
-   if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sending data to Arduino: " + data)
+   if log: logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Sending data to Arduino: " + data)
    result = ""
-   with serial.Serial(serialPort, 9600, timeout=1) as mySerial:
-      if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Trying...")
+   with serial.Serial(serialPort, 9600, timeout=5) as mySerial:
       while not result.startswith("OK"):
-         if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - New try...")
+         if log: logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Trying...")
          mySerial.write(data+'\n')
          result = mySerial.readline().rstrip()
-      if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Arduino reply: " + result)
+         if log: logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Arduino reply: " + result)
       lock.release()
       return result
 
 def gate_opener():
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Opening Gate!!!")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Opening Gate!!!")
    send_data_to_arduino("G",True)
 
 def read_light_meter():
    return send_data_to_arduino("L",False)[2:]
 
 def read_status():
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Reading configuration file")
    if not os.path.exists(configFileFolder):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
       os.makedirs(configFileFolder)
    if not os.path.isfile(os.path.join(configFileFolder,configFileName)):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Creating config file with current status")
       text_file = open(os.path.join(configFileFolder,configFileName), "w")
       status = get_status()
       text_file.write("%s" % status)
       text_file.close()
       return status
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading config file content")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Reading config file content")
    with open(os.path.join(configFileFolder,configFileName)) as f:
       content = f.readline()
       return content
 
 def save_status():
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Saving configuration file")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Saving configuration file")
    if not os.path.exists(configFileFolder):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
       os.makedirs(configFileFolder)
    if os.path.isfile(os.path.join(configFileFolder,configFileName)):
       os.remove(os.path.join(configFileFolder,configFileName))
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Creating config file with current status")
    text_file = open(os.path.join(configFileFolder,configFileName), "w")
    status = get_status()
    text_file.write("%s" % status)
@@ -168,7 +167,7 @@ def get_status():
 def turn_light_on():
    global lightStatus
    global lightArray
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Turning light on!")
    lightArray = [1,1,1,1]
    send_data_to_arduino(lightArray_to_binary(lightArray),True)
    lightStatus = True
@@ -176,7 +175,7 @@ def turn_light_on():
 def turn_light_off():
    global lightStatus
    global lightArray
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Turning light off!")
    lightArray = [0,0,0,0]
    send_data_to_arduino(lightArray_to_binary(lightArray),True)
    lightStatus = False
@@ -191,12 +190,12 @@ def light_control():
    #Variable to make this thread turn light on automatically only next day
    mySleep = False
 
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Starting Light Sensor Control!")
 
    #Read previous status
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Reading configuration file")
    status = read_status().split(',')
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + str(status))
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Configuration file content: " + str(status))
    lightArray = (int(status[0]),int(status[1]),int(status[2]),int(status[3]))
    send_data_to_arduino(lightArray_to_binary(lightArray),True)
    if ( int(lightArray_to_binary(lightArray),2) >= 1):
@@ -213,11 +212,11 @@ def light_control():
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
          signal.alarm(int(timeFrame.total_seconds()))
          setByProgram = False
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+         logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
       else:
          signal.alarm(int(timeFrame.total_seconds()))
          setByProgram = True
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+         logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
 
    #Keep it running forever
    while True:
@@ -235,11 +234,11 @@ def light_control():
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             signal.alarm(int(timeFrame.total_seconds()))
             setByProgram = False
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
          else:
             signal.alarm(int(timeFrame.total_seconds()))
             setByProgram = True
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
          #Save config file
          save_status()
          #Since adc return value can vary easily, wait little more time to next loop
@@ -251,16 +250,16 @@ def light_control():
          signal.alarm(0)
          #Set manual operation fasle (no)
          if ( manualOperation ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual operation false.")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Good morning... Set manual operation false.")
             manualOperation = False
          #Set sleep false in order to enable light turn on next night
          if ( mySleep ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Wake up light level checking.")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Good morning... Wake up light level checking.")
             mySleep = False
 
          #If ligh is on, turn light off
          if ( lightStatus ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Good morning... Turns light off!")
             #If light level bigger than trigger and light on, turn light off
             turn_light_off()
             #Save config file
@@ -280,7 +279,7 @@ def light_server():
 
    arrayPattern = re.compile('[0-1]{5}')
 
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Network Server")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Starting Network Server")
 
    MSGLEN = 690
 
@@ -302,13 +301,13 @@ def light_server():
    #Now wait for client connection.
    s.listen(2)
 
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connection...")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Waiting for connection...")
 
    while True:
       try:
          #Establish connection with client.
          c, addr = s.accept()
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Got connection from " + str(addr))
+         logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Got connection from " + str(addr))
          msg = ''
 
          while len(msg) < MSGLEN:
@@ -319,13 +318,13 @@ def light_server():
          msg = decrypter.Decrypt(msg)
          logging.info("Received: " + msg)
          if ( msg == "status.all" ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Full status requested")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Full status requested")
             status = get_status()
             logging.info("Send: " + status)
             c.send(crypter.Encrypt(status))
             logging.info("Message sent!")
          elif ( arrayPattern.match(msg) ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light status request")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Set light status request")
             lightArray[0] = msg[0]
             lightArray[1] = msg[1]
             lightArray[2] = msg[2]
@@ -348,43 +347,39 @@ def light_server():
                      timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
                      signal.alarm(int(timeFrame.total_seconds()))
                      setByProgram = False
-                     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+                     logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
                   else:
                      signal.alarm(int(timeFrame.total_seconds()))
                      setByProgram = True
-                     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
+                     logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
             send_data_to_arduino(lightArray_to_binary(lightArray),True)
             save_status()
             c.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Gate Opening request")
             passcode = msg.split('|')[1]
             rcvd_hash = signer.Sign(passcode)
             if (pass_phrase == rcvd_hash):
-               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check is ok")
+               logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Signature check is ok")
                gate_opener()
                c.send(crypter.Encrypt('ok'))
             else:
-               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
+               logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Signature check fail")
                c.send(crypter.Encrypt('fail'))
          else:
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
+            logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
       except:
          logging.info(traceback.format_exc())
          c.close()
          continue
       #Close the connection
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Connection closed!")
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Connection closed!")
       c.close()
 
 def main():
 
    global logFile
-   global lock
-
-   # Semaphore to control serial communication
-   lock = threading.Lock()
 
    parser = OptionParser()
    parser.add_option("-l", "--log", dest="logFileName",
@@ -395,25 +390,23 @@ def main():
    logging.basicConfig(filename=options.logFileName,level=logging.INFO)
 
    #Log start
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control threads!")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Starting Light Control threads!")
 
    #Set SIGALARM response
    signal.signal(signal.SIGALRM, handler_light_off)
 
    #Start light control thread
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Starting Light Sensor Thread")
    p1 = threading.Thread(target=light_control, args=[])
    p1.start()
 
    #start network process
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control Network Server")
+   logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Starting Light Control Network Server")
    p2 = threading.Thread(target=light_server, args=[])
    p2.start()
    
    while True:
       time.sleep(5)
-
-   GPIO.cleanup()
 
 if __name__ == '__main__':
    main()
