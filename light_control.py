@@ -383,10 +383,6 @@ def main():
    #Set SIGALARM response
    signal.signal(signal.SIGALRM, handler_light_off)
 
-   #Initialize pin
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio((lightPin,gatePin))
-
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
    p1 = threading.Thread(target=light_control, args=[])
