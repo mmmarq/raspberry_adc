@@ -47,6 +47,8 @@ configFileName = "light_control.cfg"
 serialPort = "/dev/ttyACM0"
 #Alarm helper
 setByProgram = True
+#Serial communication semaphore file
+lock
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -96,13 +98,18 @@ def handler_light_off(signum, frame):
 
 #Function to send command to Arduino
 def send_data_to_arduino(data,log):
+   global lock
+   lock.acquire()
    if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sending data to Arduino: " + data)
    result = ""
    with serial.Serial(serialPort, 9600, timeout=1) as mySerial:
+      if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Trying...")
       while not result.startswith("OK"):
+         if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - New try...")
          mySerial.write(data+'\n')
          result = mySerial.readline().rstrip()
       if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Arduino reply: " + result)
+      lock.release()
       return result
 
 def gate_opener():
@@ -374,6 +381,10 @@ def light_server():
 def main():
 
    global logFile
+   global lock
+
+   # Semaphore to control serial communication
+   lock = threading.Lock()
 
    parser = OptionParser()
    parser.add_option("-l", "--log", dest="logFileName",
