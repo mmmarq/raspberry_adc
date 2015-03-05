@@ -102,6 +102,7 @@ def send_data_to_arduino(data,log):
       while not result.startswith("OK"):
          mySerial.write(data+'\n')
          result = mySerial.readline().rstrip()
+      if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Arduino reply: " + result)
       return result
 
 def gate_opener():
