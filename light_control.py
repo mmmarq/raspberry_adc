@@ -64,7 +64,7 @@ def read_pass_phrase():
       return content.rstrip()
 
 #Function to convert lightArray to bit string
-def lightArray_to_bit(data):
+def lightArray_to_binary(data):
    return str(data)[1:-1].replace(" ","").replace(",","")
 
 #Function to call turn_light_off by alarm signal
@@ -78,7 +78,7 @@ def handler_light_off(signum, frame):
    if (setByProgram):
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning external light off!")
       lightArray[0] = 0
-      send_data_to_arduino(lightArray_to_bit(lightArray))
+      send_data_to_arduino(lightArray_to_binary(lightArray),True)
       setByProgram = False
       signal.alarm(1800)
    else:
@@ -95,8 +95,8 @@ def handler_light_off(signum, frame):
    save_status()
 
 #Function to send command to Arduino
-def send_data_to_arduino(data):
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sending data to Arduino: " + data)
+def send_data_to_arduino(data,log):
+   if log: logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sending data to Arduino: " + data)
    result = ""
    with serial.Serial(serialPort, 9600, timeout=1) as mySerial:
       while not result.startswith("OK"):
@@ -106,10 +106,10 @@ def send_data_to_arduino(data):
 
 def gate_opener():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Opening Gate!!!")
-   send_data_to_arduino("G")
+   send_data_to_arduino("G",True)
 
 def read_light_meter():
-   return send_data_to_arduino("L")[2:]
+   return send_data_to_arduino("L",False)[2:]
 
 def read_status():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
@@ -142,7 +142,7 @@ def save_status():
    text_file.close()
 
 def read_sensors():
-   return send_data_to_arduino("T")[2:] + "," + send_data_to_arduino("H")[2:]
+   return send_data_to_arduino("T",True)[2:] + "," + send_data_to_arduino("H",True)[2:]
 
 def get_status():
    global lightStatus
@@ -162,7 +162,7 @@ def turn_light_on():
    global lightArray
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
    lightArray = [1,1,1,1]
-   send_data_to_arduino(lightArray_to_bit(lightArray))
+   send_data_to_arduino(lightArray_to_binary(lightArray),True)
    lightStatus = True
 
 def turn_light_off():
@@ -170,7 +170,7 @@ def turn_light_off():
    global lightArray
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!")
    lightArray = [0,0,0,0]
-   send_data_to_arduino(lightArray_to_bit(lightArray))
+   send_data_to_arduino(lightArray_to_binary(lightArray),True)
    lightStatus = False
 
 def light_control():
@@ -190,7 +190,12 @@ def light_control():
    status = read_status().split(',')
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + str(status))
    lightArray = (int(status[0]),int(status[1]),int(status[2]),int(status[3]))
-   send_data_to_arduino(lightArray_to_bit(lightArray))
+   send_data_to_arduino(lightArray_to_binary(lightArray),True)
+   if ( int(lightArray_to_binary(lightArray),2) >= 1):
+      lightStatus = True
+   else:
+      lightStatus = false
+
    if (status[4] == "0"):
       manualOperation = True
    else:
@@ -340,7 +345,7 @@ def light_server():
                      signal.alarm(int(timeFrame.total_seconds()))
                      setByProgram = True
                      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-            send_data_to_arduino(lightArray_to_bit(lightArray))
+            send_data_to_arduino(lightArray_to_binary(lightArray),True)
             save_status()
             c.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
