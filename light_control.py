@@ -149,7 +149,7 @@ def get_status():
    global manualOperation
    global lightArray
 
-   status = srt(lightArray)[1:-1].replace(" ","")
+   status = str(lightArray)[1:-1].replace(" ","")
    if ( manualOperation ):
       status = status + "0,"
    else:
