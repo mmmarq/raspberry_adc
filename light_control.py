@@ -44,7 +44,7 @@ configFileFolder = "/media/2/log"
 #Config file name
 configFileName = "light_control.cfg"
 #Arduino serial port
-serialPort = "/dev/ttyUSB0"
+serialPort = "/dev/ttyACM0"
 #Alarm helper
 setByProgram = True
 
@@ -96,11 +96,11 @@ def handler_light_off(signum, frame):
 
 #Function to send command to Arduino
 def send_data_to_arduino(data):
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Send data to Arduino!!!")
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sending data to Arduino: " + data)
    result = ""
    with serial.Serial(serialPort, 9600, timeout=1) as mySerial:
       while not result.startswith("OK"):
-         ser.write(data+'\n')
+         mySerial.write(data+'\n')
          result = mySerial.readline().rstrip()
       return result
 
@@ -154,7 +154,7 @@ def get_status():
       status = status + "0,"
    else:
       status = status + "1,"
-   status = status + read_sensors()
+   status = status + "," + read_sensors()
    return status
 
 def turn_light_on():
@@ -188,7 +188,7 @@ def light_control():
    #Read previous status
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
    status = read_status().split(',')
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + status)
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + str(status))
    lightArray = (int(status[0]),int(status[1]),int(status[2]),int(status[3]))
    send_data_to_arduino(lightArray_to_bit(lightArray))
    if (status[4] == "0"):
