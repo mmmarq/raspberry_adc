@@ -256,7 +256,7 @@ def light_control():
             #If light level bigger than trigger and light on, turn light off
             turn_light_off()
             #Save config file
-            save_status()
+         save_status()
 
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(300) #sleep 5 minutes
