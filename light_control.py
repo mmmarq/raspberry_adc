@@ -194,7 +194,7 @@ def light_control():
    if ( int(lightArray_to_binary(lightArray),2) >= 1):
       lightStatus = True
    else:
-      lightStatus = false
+      lightStatus = False
 
    if (status[4] == "0"):
       manualOperation = True
