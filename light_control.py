@@ -110,7 +110,6 @@ def send_data_to_arduino(data,log):
    global i2c_address
    global i2c_char_pattern
    global i2c_array_pattern
-
    try:
       lock.acquire()
       if log: logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Sending data to Arduino: " + str(data))
@@ -119,8 +118,9 @@ def send_data_to_arduino(data,log):
          i2c_bus.write_byte(i2c_address, ord(data))
       elif ( i2c_array_pattern.match(str(data)) ):
          i2c_bus.write_byte(i2c_address, int(data,2))
+      #Give Arduino some time to update values
+      time.sleep(0.5)
       result = i2c_bus.read_byte(i2c_address)
-
    finally:
       lock.release()
    
@@ -245,7 +245,6 @@ def light_control():
       #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
-      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Initial light level reading: " + str(read_light_meter()))
       if ( read_light_meter() <= minLightLevel and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on()
