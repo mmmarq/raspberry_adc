@@ -115,9 +115,9 @@ def send_data_to_arduino(data,log):
       lock.acquire()
       if log: logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Sending data to Arduino: " + str(data))
 
-      if ( i2c_char_pattern.match(data) ):
+      if ( i2c_char_pattern.match(str(data)) ):
          i2c_bus.write_byte(i2c_address, ord(data))
-      elif ( i2c_array_pattern.match(data) ):
+      elif ( i2c_array_pattern.match(str(data)) ):
          i2c_bus.write_byte(i2c_address, int(data,2))
       result = i2c_bus.read_byte(i2c_address)
 
