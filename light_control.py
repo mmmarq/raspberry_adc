@@ -33,7 +33,7 @@ logFile = ""
 #Define if light is in manual operation
 manualOperation = False
 #Light level to trigger light_on
-minLightLevel = "700"
+minLightLevel = 175
 #Control light status
 lightStatus = False
 #Light control array
@@ -133,7 +133,7 @@ def gate_opener():
    send_data_to_arduino("G",True)
 
 def read_light_meter():
-   return send_data_to_arduino("L",False)[2:]
+   return send_data_to_arduino("L",False)
 
 def read_status():
    logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Reading configuration file")
@@ -166,7 +166,7 @@ def save_status():
    text_file.close()
 
 def read_sensors():
-   return send_data_to_arduino("T",True)[2:] + "," + send_data_to_arduino("H",True)[2:]
+   return send_data_to_arduino("T",True) + "," + send_data_to_arduino("H",True)
 
 def get_status():
    global lightStatus
