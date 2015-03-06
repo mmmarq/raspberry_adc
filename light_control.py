@@ -226,7 +226,7 @@ def light_control():
    else:
       manualOperation = False
 
-   if ( not manualOpration and lightStatus ):
+   if ( not manualOperation and lightStatus ):
       timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(29 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
       if ( int(timeFrame.total_seconds()) < 0 ):
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
