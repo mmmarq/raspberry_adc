@@ -110,6 +110,7 @@ def send_data_to_arduino(data,log):
    global i2c_address
    global i2c_char_pattern
    global i2c_array_pattern
+   result = 0
    try:
       lock.acquire()
       if log: logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Sending data to Arduino: " + str(data))
