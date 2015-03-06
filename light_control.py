@@ -119,7 +119,7 @@ def send_data_to_arduino(data,log):
          i2c_bus.write_byte(i2c_address, ord(data))
       elif ( i2c_array_pattern.match(data) ):
          i2c_bus.write_byte(i2c_address, int(data,2))
-      result = i2c_bus.read_byte(address)
+      result = i2c_bus.read_byte(i2c_address)
 
    finally:
       lock.release()
