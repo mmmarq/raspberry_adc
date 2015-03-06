@@ -212,6 +212,7 @@ def light_control():
    #Read previous status
    logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Reading configuration file")
    status = read_status().split(',')
+
    logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Configuration file content: " + str(status))
    lightArray = (int(status[0]),int(status[1]),int(status[2]),int(status[3]))
    send_data_to_arduino(lightArray_to_int(lightArray),True)
@@ -224,6 +225,8 @@ def light_control():
       manualOperation = True
    else:
       manualOperation = False
+
+   if ( not manualOpration and lightStatus ):
       timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(29 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
       if ( int(timeFrame.total_seconds()) < 0 ):
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
@@ -242,6 +245,7 @@ def light_control():
       #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - Initial light level reading: " + str(read_light_meter()))
       if ( read_light_meter() <= minLightLevel and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on()
