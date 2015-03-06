@@ -166,7 +166,7 @@ def save_status():
    text_file.close()
 
 def read_sensors():
-   return send_data_to_arduino("T",True) + "," + send_data_to_arduino("H",True)
+   return str(send_data_to_arduino("T",True)) + "," + str(send_data_to_arduino("H",True))
 
 def get_status():
    global lightStatus
