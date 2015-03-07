@@ -122,7 +122,10 @@ def send_data_to_arduino(data,log):
       #Give Arduino some time to update values
       time.sleep(0.5)
       result = i2c_bus.read_byte(i2c_address)
-   finally:
+   except:
+      lock.release()
+      logging.info(strftime("%d-%m-%Y %H:%M:%S", localtime()) + " - IMPORTANT - I2C communication failed!!!")
+   else:
       lock.release()
    
    if ( data == 'S' ):
