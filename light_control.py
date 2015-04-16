@@ -35,7 +35,8 @@ adcPin = "0x03"
 #Light level to trigger light_on
 minLightLevel = "0x70"
 #GPIO pin to control light relay
-lightPin = 25
+lightPin1 = 25
+lightPin2 = 18
 #Control light status
 lightStatus = False
 #Control if light meter should sleep
@@ -67,7 +68,8 @@ def handler_light_off(signum, frame):
    global lightStatus
    global mySleep
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Its time to turn lights off... See you tomorrow!")
-   turn_light_off(lightPin)
+   turn_light_off(lightPin1)
+   turn_light_off(lightPin2)
    lightStatus = False
    manualOperation = False
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level checking is going to sleep until morning.")
@@ -206,14 +208,16 @@ def light_control():
    if ( status.split(' ')[0] == "on" ):
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light on")
       lightStatus = True
-      turn_light_on(lightPin)
+      turn_light_on(lightPin1)
+      turn_light_on(lightPin2)
       timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
       signal.alarm(int(timeFrame.total_seconds()))
    else:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light off")
       lightStatus = False
-      turn_light_off(lightPin)
+      turn_light_off(lightPin1)
+      turn_light_off(lightPin2)
       signal.alarm(0)
    if ( status.split(' ')[1] == "manual" ):
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
@@ -231,7 +235,8 @@ def light_control():
       #light meter is not in sleep mode (mySleep)
       if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
-         turn_light_on(lightPin)
+         turn_light_on(lightPin1)
+         turn_light_on(lightPin2)
          #Set alarm to turn light off
          timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
@@ -258,9 +263,10 @@ def light_control():
          if ( lightStatus ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
             #If light level bigger than trigger and light on, turn light off
-            turn_light_off(lightPin)
-            #Save config file
-            save_status()
+            turn_light_off(lightPin1)
+            turn_light_off(lightPin2)
+         #Save config file
+         save_status()
 
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(300) #sleep 5 minutes
@@ -319,7 +325,8 @@ def light_server():
             logging.info("Message sent!")
          elif ( msg == "light.on" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
-            turn_light_on(lightPin)
+            turn_light_on(lightPin1)
+            turn_light_on(lightPin2)
             manualOperation = True
             mySleep = True
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
@@ -329,7 +336,8 @@ def light_server():
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "light.off" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
-            turn_light_off(lightPin)
+            turn_light_off(lightPin1)
+            turn_light_off(lightPin2)
             manualOperation = True
             mySleep = True
             signal.alarm(0)
@@ -393,7 +401,7 @@ def main():
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio((lightPin,gatePin))
+   init_gpio((lightPin1,lightPin2,gatePin))
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
