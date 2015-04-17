@@ -36,7 +36,7 @@ adcPin = "0x03"
 minLightLevel = "0x70"
 #GPIO pin to control light relay
 lightPin1 = 25
-lightPin2 = 18
+lightPin2 = 8
 #Control light status
 lightStatus = False
 #Control if light meter should sleep
