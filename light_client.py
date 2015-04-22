@@ -16,7 +16,8 @@ def main():
    #PUB_KEY = "/Users/wmm125/.ssh/raspberry/keys/public"
    #PVT_KEY = "/Users/wmm125/.ssh/raspberry/keys/private"
 
-   MSGLEN = 690
+   #MSGLEN = 690
+   MSGLEN = 178
    
    print "Loading Private/Public keys.."
    crypter = keyczar.Encrypter.Read(PUB_KEY)
