@@ -281,7 +281,8 @@ def light_server():
    
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Network Server")
 
-   MSGLEN = 690
+   #MSGLEN = 690
+   MSGLEN = 178
 
    logging.info("Loading Private/Public keys..")
    crypter = keyczar.Encrypter.Read(PUB_KEY)
