@@ -403,6 +403,7 @@ def light_server():
             image = get_image(msg[-1])
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Image size = " + str(len(image)))
             c.send(struct.pack("!i",len(image))+image)
+            time.sleep(1)
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))
