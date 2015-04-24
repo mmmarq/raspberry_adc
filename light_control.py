@@ -11,8 +11,10 @@ import getopt
 import subprocess
 import signal
 import socket
+import struct
 import traceback
 import logging
+import urllib
 import re
 import os
 from subprocess import Popen, PIPE, call
@@ -55,6 +57,10 @@ ipAddr = "192.168.0.2"
 configFileFolder = "/media/2/log"
 #Config file name
 configFileName = "light_control.cfg"
+#Camera URL
+cameraURL = []
+#Camera CFG file
+cameraCfgFile = "/home/pi/.keys/camera.cfg"
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -78,6 +84,14 @@ def handler_light_off(signum, frame):
    #Save config file
    save_status()
    signal.alarm(0)
+
+def load_camera_url():
+   global cameraURL
+   if os.path.isfile(cameraCfgFile):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading camera config file content")
+      with open(cameraCfgFile) as f:
+         cameraURL = f.readlines()
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Found " + str(len(cameraURL)) + " camera URLs")
 
 def gate_opener(gatePin):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate opened!!!")
@@ -191,6 +205,16 @@ def init_gpio(pinList):
    GPIO.setup(pinList, GPIO.OUT)
    GPIO.output(pinList, False)
 
+def get_image(data):
+   if ( int(data) < len(cameraURL) ):
+     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading snapshot from camera " + data)
+     resource = urllib.urlopen(cameraURL[int(data)-1])
+     image = resource.read()
+   else:
+     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Camera URL not available (" + data + ")")
+     image = ""
+   return image
+
 def light_control():
    global manualOperation
    global lightStatus
@@ -302,6 +326,9 @@ def light_server():
    #Now wait for client connection.
    s.listen(2)
 
+   #Load CCTV cameras URL
+   load_camera_url()
+
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Waiting for connection...")
 
    while True:
@@ -371,6 +398,11 @@ def light_server():
             else:
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Signature check fail")
                c.send(crypter.Encrypt('fail'))
+         elif re.match('^imageRequest.+',msg) is not None:
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Camera image request")
+            image = get_image(msg[-1])
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Image size = " + str(len(image)))
+            c.send(struct.pack("!i",len(image))+image)
          else:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Request not valid")
             c.send(crypter.Encrypt('fail'))

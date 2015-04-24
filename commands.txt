@@ -24,3 +24,7 @@ java -jar KeyczarTool-0.71g-090613.jar create --location=/Users/wmm125/temp/cyph
 java -jar KeyczarTool-0.71g-090613.jar addkey --location=/Users/wmm125/temp/cypher/signkeys --status=primary
 
 
+# Pytohn packages
+sudo pip install Image
+sudo pip install urllib3
+
