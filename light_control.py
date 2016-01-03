@@ -25,6 +25,7 @@ from keyczar import keyczart
 from keyczar.errors import KeyczarError
 from optparse import OptionParser
 import RPi.GPIO as GPIO
+import Adafruit_DHT
 
 #Log file name
 logFile = ""
@@ -35,10 +36,12 @@ devAddr = "0x48"
 #I2C ADC channel
 adcPin = "0x03"
 #Light level to trigger light_on
-minLightLevel = "0x70"
+minLightLevel = "0x60"
 #GPIO pin to control light relay
-lightPin1 = 25
-lightPin2 = 8
+lightPin1 = 16
+lightPin2 = 20
+#DHT22 sensor pin
+dhtPin = 12
 #Control light status
 lightStatus = False
 #Control if light meter should sleep
@@ -52,9 +55,9 @@ i2cget = "/usr/sbin/i2cget"
 #Server port number
 portNum = 50004
 #Server IP address
-ipAddr = "192.168.0.2"
+ipAddr = "192.168.1.2"
 #Config file folder
-configFileFolder = "/media/2/log"
+configFileFolder = "/mnt/code/log"
 #Config file name
 configFileName = "light_control.cfg"
 #Camera URL
@@ -152,24 +155,20 @@ def save_status():
    text_file.close()
 
 def read_local_data():
-   ldata = []
+   lTemp = "0.00"
+   lHumid = "0.00"
 
-   dirname, filename = os.path.split(os.path.abspath(__file__))
-   EXE = "sudo " + dirname + "/dht11"
+   # Set sensor type
+   sensor = Adafruit_DHT.DHT22
+   # Read data from sensor
+   humid, temp = Adafruit_DHT.read_retry(sensor, dhtPin);
 
-   while True:
-     try:
-       #Read sensor data twice to refresh data
-       output=subprocess.check_output(EXE, shell=True)
-       output=subprocess.check_output(EXE, shell=True)
-       #Parse local data
-       ldata = output.split()
-       #Stop loop
-       break
-     except:
-       #If sensor reading fail, try again
-       continue
-   return ldata[1] + " " + ldata[0]
+   # Show data if read was succesful
+   if humid is not None and temp is not None:
+      lTemp = "{0:0.1f}".format(temp)
+      lHumid =  "{0:0.1f}".format(humid)
+
+   return lTemp + " " + lHumid
 
 def get_status():
    global lightStatus
@@ -435,7 +434,7 @@ def main():
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio((lightPin1,lightPin2,gatePin))
+   init_gpio((lightPin1,lightPin2,dhtPin,gatePin))
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")

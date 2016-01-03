@@ -11,7 +11,7 @@
 case "$1" in
   start)
     echo "Starting light_control.py"
-    (sleep 60;/media/2/code/raspberry_adc/light_control.py --log /media/2/log/light_control.log)&
+    (sleep 20;/mnt/code/raspberry_adc/light_control.py --log /mnt/code/log/light_control.log)&
     ;;
   stop)
     echo "Stopping light_control.py"
@@ -21,7 +21,7 @@ case "$1" in
     echo "Stopping light_control.py"
     sudo killall -9 light_control.py
     echo "Starting light_control.py"
-    sudo /media/2/code/raspberry_adc/light_control.py --log /media/2/log/light_control.log &
+    sudo /mnt/code/raspberry_adc/light_control.py --log /mnt/code/log/light_control.log &
     ;;
   *)
     echo "Usage: /etc/init.d/light_control_starter {start|stop|restart}"

@@ -4,11 +4,13 @@
 import RPi.GPIO as GPIO
 import time
 
-_PIN = 25
+_PIN = 16
 
 #print GPIO.RPI_REVISION
 
 GPIO.setmode(GPIO.BCM)
+#GPIO.setmode(GPIO.BOARD)
+
 GPIO.setup(_PIN, GPIO.OUT)
 GPIO.output(_PIN, True)
 
