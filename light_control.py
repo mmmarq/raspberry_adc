@@ -36,7 +36,7 @@ devAddr = "0x48"
 #I2C ADC channel
 adcPin = "0x03"
 #Light level to trigger light_on
-minLightLevel = "0x60"
+minLightLevel = "0x70"
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
@@ -162,7 +162,7 @@ def read_local_data():
    sensor = Adafruit_DHT.DHT22
    # Read data from sensor
    humid, temp = Adafruit_DHT.read_retry(sensor, dhtPin);
-
+   humid, temp = Adafruit_DHT.read_retry(sensor, dhtPin);
    # Show data if read was succesful
    if humid is not None and temp is not None:
       lTemp = "{0:0.1f}".format(temp)
