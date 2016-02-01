@@ -31,12 +31,10 @@ import Adafruit_DHT
 logFile = ""
 #Define if light is in manual operation
 manualOperation = False
-#I2C device address
-devAddr = "0x48"
-#I2C ADC channel
-adcPin = "0x03"
+#LDR Pin
+ldrPin = 4
 #Light level to trigger light_on
-minLightLevel = "0x60"
+minLightLevel = 20000
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
@@ -102,18 +100,26 @@ def gate_opener(gatePin):
    time.sleep(gateSignalLenght)
    GPIO.output(gatePin, False)
 
-def read_light_meter(device,channel):
-   #Set default ADC channel
-   p1 = Popen([i2cget,"-y","1",device,channel], stdout=PIPE)
-   p1.stdout.close()
-   #Read ADC twice to get right value
-   p1 = Popen([i2cget,"-y","1",device], stdout=PIPE)
-   p1.stdout.close()
-   p1 = Popen([i2cget,"-y","1",device], stdout=PIPE)
-   #Store ADC value
-   output = p1.communicate()[0]
-   p1.stdout.close()
-   return output
+def read_light_meter(ldrPin):
+   measurement = 0
+   # Discharge capacitor
+   GPIO.setup(ldrPin, GPIO.OUT)
+   GPIO.output(ldrPin, GPIO.LOW)
+   time.sleep(1)
+
+   GPIO.setup(ldrPin, GPIO.IN)
+   # Count loops until voltage across
+   # capacitor reads high on GPIO
+   # or "measurement" reach too much high value
+   values = []
+   for i in range(0,100):
+      while (GPIO.input(PiPin) == GPIO.LOW):
+         measurement += 1
+      values.append(measurement)
+
+   GPIO.setup(ldrPin, GPIO.OUT)
+   GPIO.output(ldrPin, GPIO.LOW)
+   return sum(values)/len(values)
 
 def read_pass_phrase():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
@@ -256,7 +262,7 @@ def light_control():
       #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
-      if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation and not mySleep ):
+      if ( read_light_meter(ldrPin) <= minLightLevel and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin1)
          turn_light_on(lightPin2)
@@ -270,7 +276,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
       
       #Check if there is light enough outside
-      if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) ):
+      if ( read_light_meter(ldrPin) > minLightLevel ):
          #Remove any existing alarm
          signal.alarm(0)
          #Set manual operation fasle (no)
@@ -434,7 +440,7 @@ def main():
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio((lightPin1,lightPin2,dhtPin,gatePin))
+   init_gpio((lightPin1,lightPin2,dhtPin,gatePin,ldrPin))
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
