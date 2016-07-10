@@ -15,6 +15,7 @@ import struct
 import traceback
 import logging
 import urllib
+import urllib2
 import re
 import os
 from subprocess import Popen, PIPE, call
@@ -25,23 +26,16 @@ from keyczar import keyczart
 from keyczar.errors import KeyczarError
 from optparse import OptionParser
 import RPi.GPIO as GPIO
-import Adafruit_DHT
 
 #Log file name
 logFile = ""
 #Define if light is in manual operation
 manualOperation = False
-#I2C device address
-devAddr = "0x48"
-#I2C ADC channel
-adcPin = "0x03"
 #Light level to trigger light_on
-minLightLevel = "0x70"
+minLightLevel = "70"
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
-#DHT22 sensor pin
-dhtPin = 12
 #Control light status
 lightStatus = False
 #Control if light meter should sleep
@@ -50,8 +44,6 @@ mySleep = False
 gatePin = 26
 #Gate signal lenght
 gateSignalLenght = 0.5
-#i2cget command full path
-i2cget = "/usr/sbin/i2cget"
 #Server port number
 portNum = 50004
 #Server IP address
@@ -64,6 +56,10 @@ configFileName = "light_control.cfg"
 cameraURL = []
 #Camera CFG file
 cameraCfgFile = "/home/pi/.keys/camera.cfg"
+#Arduino CFG file
+arduinoCfgFile = "/home/pi/.keys/arduino.cfg"
+#Arduino Address
+arduinoIP = ""
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -96,24 +92,29 @@ def load_camera_url():
          cameraURL = f.readlines()
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Found " + str(len(cameraURL)) + " camera URLs")
 
+def load_arduino_ip():
+   global arduinoIP
+   if os.path.isfile(arduinoCfgFile):
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading arduino config file content")
+      with open(arduinoCfgFile) as f:
+         arduinoIP = f.readline().rstrip()
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Found " + arduinoIP + " arduino IP")
+
 def gate_opener(gatePin):
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate opened!!!")
    GPIO.output(gatePin, True)
    time.sleep(gateSignalLenght)
    GPIO.output(gatePin, False)
 
-def read_light_meter(device,channel):
-   #Set default ADC channel
-   p1 = Popen([i2cget,"-y","1",device,channel], stdout=PIPE)
-   p1.stdout.close()
-   #Read ADC twice to get right value
-   p1 = Popen([i2cget,"-y","1",device], stdout=PIPE)
-   p1.stdout.close()
-   p1 = Popen([i2cget,"-y","1",device], stdout=PIPE)
-   #Store ADC value
-   output = p1.communicate()[0]
-   p1.stdout.close()
-   return output
+def read_light_meter():
+   global arduinoIP
+   light = "512"
+   # Read data from Arduino
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
+   response = urllib2.urlopen(arduinoIP)
+   html = response.read()
+   temp,humid,light,alarm,rasp = html.split()
+   return light
 
 def read_pass_phrase():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
@@ -155,18 +156,19 @@ def save_status():
    text_file.close()
 
 def read_local_data():
+   global arduinoIP
    lTemp = "0.00"
    lHumid = "0.00"
 
-   # Set sensor type
-   sensor = Adafruit_DHT.DHT22
-   # Read data from sensor
-   humid, temp = Adafruit_DHT.read_retry(sensor, dhtPin);
-   humid, temp = Adafruit_DHT.read_retry(sensor, dhtPin);
+   # Read data from Arduino
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading local data from " + arduinoIP)
+   response = urllib2.urlopen(arduinoIP)
+   html = response.read()
+   temp,humid,alarm,light,rasp = html.split()
    # Show data if read was succesful
    if humid is not None and temp is not None:
-      lTemp = "{0:0.1f}".format(temp)
-      lHumid =  "{0:0.1f}".format(humid)
+      lTemp = "{0:0.1f}".format(float(temp))
+      lHumid =  "{0:0.1f}".format(float(humid))
 
    return lTemp + " " + lHumid
 
@@ -218,6 +220,10 @@ def light_control():
    global manualOperation
    global lightStatus
    global mySleep
+   global arduinoIP
+
+   #Load Arduino IP address
+   load_arduino_ip()
 
    #Variable to make this thread turn light on automatically only next day
    mySleep = False
@@ -256,7 +262,7 @@ def light_control():
       #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
-      if ( int(read_light_meter(devAddr,adcPin),16) <= int(minLightLevel,16) and not lightStatus and not manualOperation and not mySleep ):
+      if ( int(read_light_meter()) <= int(minLightLevel) and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin1)
          turn_light_on(lightPin2)
@@ -270,7 +276,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
       
       #Check if there is light enough outside
-      if ( int(read_light_meter(devAddr,adcPin),16) > int(minLightLevel,16) ):
+      if ( int(read_light_meter()) > int(minLightLevel) ):
          #Remove any existing alarm
          signal.alarm(0)
          #Set manual operation fasle (no)
@@ -434,7 +440,7 @@ def main():
 
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio((lightPin1,lightPin2,dhtPin,gatePin))
+   init_gpio((lightPin1,lightPin2,gatePin))
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
