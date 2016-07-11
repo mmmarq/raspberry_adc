@@ -32,7 +32,7 @@ logFile = ""
 #Define if light is in manual operation
 manualOperation = False
 #Light level to trigger light_on
-minLightLevel = "70"
+minLightLevel = "80"
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
@@ -110,7 +110,7 @@ def read_light_meter():
    global arduinoIP
    light = "512"
    # Read data from Arduino
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
+   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
    response = urllib2.urlopen(arduinoIP)
    html = response.read()
    temp,humid,light,alarm,rasp = html.split()
@@ -161,7 +161,7 @@ def read_local_data():
    lHumid = "0.00"
 
    # Read data from Arduino
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading local data from " + arduinoIP)
+   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading local data from " + arduinoIP)
    response = urllib2.urlopen(arduinoIP)
    html = response.read()
    temp,humid,alarm,light,rasp = html.split()
@@ -262,7 +262,10 @@ def light_control():
       #light is not already on (lightStatus)
       #system is not in manual operation (manualOperation)
       #light meter is not in sleep mode (mySleep)
-      if ( int(read_light_meter()) <= int(minLightLevel) and not lightStatus and not manualOperation and not mySleep ):
+      
+      #Temporary light level
+      tLight = int(read_light_meter())
+      if ( tLight <= int(minLightLevel) and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin1)
          turn_light_on(lightPin2)
@@ -276,7 +279,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
       
       #Check if there is light enough outside
-      if ( int(read_light_meter()) > int(minLightLevel) ):
+      if ( tLight > int(minLightLevel) ):
          #Remove any existing alarm
          signal.alarm(0)
          #Set manual operation fasle (no)
@@ -310,7 +313,6 @@ def light_server():
    
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Network Server")
 
-   #MSGLEN = 690
    MSGLEN = 178
 
    logging.info("Loading Private/Public keys..")
