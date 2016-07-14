@@ -108,7 +108,7 @@ def gate_opener(gatePin):
 
 def read_light_meter():
    global arduinoIP
-   light = "512"
+   light = "999"
    # Read data from Arduino
    #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
    response = urllib2.urlopen(arduinoIP)
@@ -280,6 +280,8 @@ def light_control():
       
       #Check if there is light enough outside
       if ( tLight > int(minLightLevel) ):
+         #Log light level
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Light level: " + str(tLight))
          #Remove any existing alarm
          signal.alarm(0)
          #Set manual operation fasle (no)
