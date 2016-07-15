@@ -279,7 +279,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
       
       #Check if there is light enough outside
-      if ( tLight > int(minLightLevel) ):
+      if ( tLight > (int(minLightLevel) * 2) ):
          #Log light level
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Light level: " + str(tLight))
          #Remove any existing alarm
