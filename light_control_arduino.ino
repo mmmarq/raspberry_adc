@@ -9,14 +9,15 @@
 //ether.begin(sizeof Ethernet::buffer, mymac, 53)
 #include <dht.h>
 #include <EtherCard.h>
+#include <QueueArray.h>
 
 static byte myip[] = { 192,168,1,100 };                  // ethernet interface static ip address
 static byte gwip[] = { 192,168,1,1 };                    // gateway static ip address
-
 static byte mymac[] = { 0x74,0x69,0x69,0x2D,0x30,0x31 }; // ethernet mac address - must be unique on your network
 
 byte Ethernet::buffer[500];                              // tcp/ip send and receive buffer
 BufferFiller bfill;
+const boolean STATICIPADDRESS = false;              // set to true to disable DHCP (adjust myip/gwip values above)
 
 dht DHT;                                            // weather sensor data global var
 const byte DHTPIN = 22;                             // set DHT22 sensor pin
@@ -28,18 +29,25 @@ const byte ALARMSTATUSPIN = 2;                      // set alarm status pin
 
 const byte RELAY1PIN = 23;                          // set light relay 1 pin
 const byte RELAY2PIN = 24;                          // set light relay 2 pin
+
 const byte GATEPIN = 25;                            // set gate opening pin
+
+const byte LDRPIN = A0;                             // set LDR sensor pin
+const int numReadings = 100;                        // amount of readings to get light level average
+int averageLightLevel = 0;                          // store light level average value
+QueueArray <int> readings;                          // the readings from the analog input
+unsigned int totalLightLevel = 0;                   // the running total
 
 unsigned long currTime = 0;                         // store current time in milliseconds since board is up
 unsigned long prevTime = 0;                         // store last time lapse reading
 float temperature = 0;                              // global temperature var
 float humidity = 0;                                 // global humidity var
+
 boolean light = false;                              // set initial light status
 boolean alarm = false;                              // set initial alarm status
 boolean raspi = false;                              // set initial raspi status
-const byte LDRPIN = A0;                             // set LDR sensor pin
-const boolean STATICIPADDRESS = false;              // set to true to disable DHCP (adjust myip/gwip values above)
-const boolean DEBUG = false;                        // enable or disable debug messages
+
+const boolean DEBUG = true;                        // enable or disable debug messages
 
 void setup() {
   Serial.begin(9600);                                         // set serial communication speed
@@ -76,16 +84,18 @@ void setup() {
   readLightStatusPin();                                       // check light status
   readAlarmStatus();                                          // initialize alarm status
   readRaspiStatus();                                          // initialize raspi status
+  readLightLevel();                                           // initialize light level value
 }
 
 void loop() {
   currTime = millis();                                        // read current time in milliseconds since system is UP
   if (currTime < prevTime) currTime = prevTime;               // check for currTime overflow (after aprox. 50 days);
-  if ((currTime - prevTime) >= 15000){                        // check if passed 15 sec since last data update
+  if ((currTime - prevTime) >= 1000){                         // check if passed 1 sec since last data update
     readDHT22();                                              // read weather data from sensor
     readLightStatusPin();                                     // update light status
     readAlarmStatus();                                        // update alarm status
     readRaspiStatus();                                        // update raspi status
+    readLightLevel();                                         // update light level value
     prevTime = currTime;                                      // update last update time
   }
 
@@ -96,7 +106,7 @@ void loop() {
   }
 }
 
-void readLightStatusPin(){                                 // check light status pin
+void readLightStatusPin(){                                    // check light status pin
   if ((digitalRead(LIGHT1STATUSPIN) == HIGH) || 
       (digitalRead(LIGHT2STATUSPIN) == HIGH)){                // if light status pin is HIGH
     if (DEBUG) Serial.println("Light on");
@@ -109,8 +119,29 @@ void readLightStatusPin(){                                 // check light status
   }
 }
 
-int readLightLevel(){                                         // read light level from LDR
-  return analogRead(LDRPIN) / 2;
+void readLightLevel(){                                        // read light level from LDR and store average
+  int newValue = analogRead(LDRPIN) / 2;                      // read from the sensor
+  int oldValue = 0;                                           // dequeue oldest value
+
+  if (DEBUG) Serial.print("Queue lenght: ");
+  if (DEBUG) Serial.print(readings.count());
+  if (DEBUG) Serial.print(" - Newer: ");
+  if (DEBUG) Serial.print(newValue);
+
+  if (readings.count() < numReadings){                        // check if queue did not reach max lenght
+    readings.enqueue(newValue);                               // add sensor value into queue
+    totalLightLevel = totalLightLevel + newValue;             // add the reading to the total
+  }else{                                                      // if queue at max lenght
+    oldValue = readings.dequeue();                            // remove oldest value from queue
+    if (DEBUG) Serial.print(" - Oldest: ");
+    if (DEBUG) Serial.print(oldValue);    
+    totalLightLevel = totalLightLevel - oldValue;             // subtract the last reading
+    readings.enqueue(newValue);                               // add sensor value into queue
+    totalLightLevel = totalLightLevel + newValue;             // add the reading to the total
+  }
+  averageLightLevel = totalLightLevel / readings.count();     // calculate the average
+  if (DEBUG) Serial.print(" - Light level (average): ");
+  if (DEBUG) Serial.println(averageLightLevel);
 }
 
 void setLightOff(){                                           // turn light off
@@ -203,7 +234,7 @@ static word homePage() {
 
   bfill = ether.tcpOffset();
   bfill.emit_p(PSTR("$D.$D $D.$D $D $D $D"),
-    t1, t2, h1, h2, readLightLevel(), temp1, temp2);
+    t1, t2, h1, h2, averageLightLevel, temp1, temp2);
   return bfill.position();
 }
 
