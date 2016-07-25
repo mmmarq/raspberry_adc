@@ -110,7 +110,7 @@ def read_light_meter():
    global arduinoIP
    light = "999"
    # Read data from Arduino
-   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
    try:
       response = urllib2.urlopen(arduinoIP)
       html = response.read()
@@ -118,6 +118,7 @@ def read_light_meter():
    except:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
    finally:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level loaded: " + light)
       return light
 
 def read_pass_phrase():
@@ -283,7 +284,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
       
       #Check if there is light enough outside
-      if ( tLight > (minLightLevel * 2) ):
+      elif ( tLight > minLightLevel ):
          #Log light level
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Light level: " + str(tLight))
          #Remove any existing alarm
@@ -305,12 +306,12 @@ def light_control():
             turn_light_off(lightPin2)
          #Save config file
          save_status()
-
+         
          #Since adc return value can vary easily, wait little more time to next loop
          time.sleep(300) #sleep 5 minutes
-
+         
       #Just wait a while before start next loop iteration
-      time.sleep(10)
+      time.sleep(60)
 
 def light_server():
    global lightStatus
