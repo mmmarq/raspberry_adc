@@ -167,15 +167,18 @@ def read_local_data():
 
    # Read data from Arduino
    #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading local data from " + arduinoIP)
-   response = urllib2.urlopen(arduinoIP)
-   html = response.read()
-   temp,humid,alarm,light,rasp = html.split()
-   # Show data if read was succesful
-   if humid is not None and temp is not None:
-      lTemp = "{0:0.1f}".format(float(temp))
-      lHumid =  "{0:0.1f}".format(float(humid))
-
-   return lTemp + " " + lHumid
+   try:
+      response = urllib2.urlopen(arduinoIP)
+      html = response.read()
+      temp,humid,alarm,light,rasp = html.split()
+      # Show data if read was succesful
+      if humid is not None and temp is not None:
+         lTemp = "{0:0.1f}".format(float(temp))
+         lHumid =  "{0:0.1f}".format(float(humid))
+   except:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
+   finally:
+      return lTemp + " " + lHumid
 
 def get_status():
    global lightStatus
