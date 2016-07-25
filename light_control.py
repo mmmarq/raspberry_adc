@@ -32,7 +32,7 @@ logFile = ""
 #Define if light is in manual operation
 manualOperation = False
 #Light level to trigger light_on
-minLightLevel = "85"
+minLightLevel = 85
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
@@ -111,10 +111,14 @@ def read_light_meter():
    light = "999"
    # Read data from Arduino
    #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
-   response = urllib2.urlopen(arduinoIP)
-   html = response.read()
-   temp,humid,light,alarm,rasp = html.split()
-   return light
+   try:
+      response = urllib2.urlopen(arduinoIP)
+      html = response.read()
+      temp,humid,light,alarm,rasp = html.split()
+   except:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
+   finally:
+      return light
 
 def read_pass_phrase():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
@@ -265,7 +269,7 @@ def light_control():
       
       #Temporary light level
       tLight = int(read_light_meter())
-      if ( tLight <= int(minLightLevel) and not lightStatus and not manualOperation and not mySleep ):
+      if ( tLight <= minLightLevel and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin1)
          turn_light_on(lightPin2)
@@ -279,7 +283,7 @@ def light_control():
          time.sleep(600) #sleep 10 minutes
       
       #Check if there is light enough outside
-      if ( tLight > (int(minLightLevel) * 2) ):
+      if ( tLight > (minLightLevel * 2) ):
          #Log light level
          logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Light level: " + str(tLight))
          #Remove any existing alarm
