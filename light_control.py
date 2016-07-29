@@ -108,17 +108,19 @@ def gate_opener(gatePin):
 
 def read_light_meter():
    global arduinoIP
-   light = "999"
+   light = "256"
    # Read data from Arduino
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
+   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
    try:
-      response = urllib2.urlopen(arduinoIP)
+      response = urllib2.urlopen(arduinoIP, timeout=2)
       html = response.read()
       temp,humid,light,alarm,rasp = html.split()
+   except socket.timeout, e:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
    except:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
    finally:
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level loaded: " + light)
+      #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level loaded: " + light)
       return light
 
 def read_pass_phrase():
