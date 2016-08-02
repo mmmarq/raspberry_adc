@@ -168,15 +168,14 @@ def read_local_data():
    lHumid = "0.00"
 
    # Read data from Arduino
-   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading local data from " + arduinoIP)
    try:
-      response = urllib2.urlopen(arduinoIP)
+      response = urllib2.urlopen(arduinoIP, timeout=2)
       html = response.read()
       temp,humid,alarm,light,rasp = html.split()
-      # Show data if read was succesful
-      if humid is not None and temp is not None:
-         lTemp = "{0:0.1f}".format(float(temp))
-         lHumid =  "{0:0.1f}".format(float(humid))
+      lTemp = "{0:0.1f}".format(float(temp))
+      lHumid =  "{0:0.1f}".format(float(humid))
+   except socket.timeout, e:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
    except:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
    finally:
