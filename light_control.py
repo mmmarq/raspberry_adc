@@ -106,9 +106,9 @@ def gate_opener(gatePin):
    time.sleep(gateSignalLenght)
    GPIO.output(gatePin, False)
 
-def read_light_meter():
+def read_light_meter(temp):
    global arduinoIP
-   light = "256"
+   light = temp
    # Read data from Arduino
    #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
    try:
@@ -230,6 +230,7 @@ def light_control():
    global lightStatus
    global mySleep
    global arduinoIP
+   tLight = 0
 
    #Load Arduino IP address
    load_arduino_ip()
@@ -273,7 +274,7 @@ def light_control():
       #light meter is not in sleep mode (mySleep)
       
       #Temporary light level
-      tLight = int(read_light_meter())
+      tLight = int(read_light_meter(tLight))
       if ( tLight <= minLightLevel and not lightStatus and not manualOperation and not mySleep ):
          #If light level lower than trigger and light off, turn light on
          turn_light_on(lightPin1)
