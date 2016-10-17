@@ -1,15 +1,26 @@
-// https://github.com/jcw/ethercard
-//VCC -   3.3V
-//GND -    GND
-//SCK - Pin 52
-//SO  - Pin 50
-//SI  - Pin 51
-//CS  - Pin 53 # Selectable with the ether.begin() function
-//The default CS pin defaults to 8, so you have to set it on a mega:
-//ether.begin(sizeof Ethernet::buffer, mymac, 53)
+/*
+https://github.com/jcw/ethercard
+VCC -   3.3V
+GND -    GND
+SCK - Pin 52
+SO  - Pin 50
+SI  - Pin 51
+CS  - Pin 53 # Selectable with the ether.begin() function
+The default CS pin defaults to 8, so you have to set it on a mega:
+ether.begin(sizeof Ethernet::buffer, mymac, 53)
+
+Hardware Connections (I2C - Arduino Mega):
+ -VCC = 3.3V
+ -GND = GND
+ -SDA = 20
+ -SCL = 21
+*/
+
 #include <dht.h>
 #include <EtherCard.h>
 #include <QueueArray.h>
+#include <Wire.h>
+#include "SparkFunHTU21D.h"
 
 static byte myip[] = { 192,168,1,100 };                  // ethernet interface static ip address
 static byte gwip[] = { 192,168,1,1 };                    // gateway static ip address
@@ -19,8 +30,9 @@ byte Ethernet::buffer[500];                              // tcp/ip send and rece
 BufferFiller bfill;
 const boolean STATICIPADDRESS = false;              // set to true to disable DHCP (adjust myip/gwip values above)
 
-dht DHT;                                            // weather sensor data global var
-const byte DHTPIN = 22;                             // set DHT22 sensor pin
+//Create temperature and humidity sensor instance of the object
+HTU21D tempHumSendor;
+
 const byte LIGHT1STATUSPIN = 11;                    // set light 1 status pin
 const byte LIGHT2STATUSPIN = 10;                    // set light 2 status pin
 const byte GATESTATUSPIN = 7;                       // set gate status pin
@@ -80,7 +92,7 @@ void setup() {
   digitalWrite(RELAY2PIN, HIGH);
   digitalWrite(GATEPIN,LOW);
 
-  readDHT22();                                                // initialize temp and humidit values
+  tempHumSendor.begin();                                      // initialize temp and humidit values
   readLightStatusPin();                                       // check light status
   readAlarmStatus();                                          // initialize alarm status
   readRaspiStatus();                                          // initialize raspi status
@@ -91,7 +103,7 @@ void loop() {
   currTime = millis();                                        // read current time in milliseconds since system is UP
   if (currTime < prevTime) currTime = prevTime;               // check for currTime overflow (after aprox. 50 days);
   if ((currTime - prevTime) >= 1000){                         // check if passed 1 sec since last data update
-    readDHT22();                                              // read weather data from sensor
+    readHTU21D();                                             // read weather data from sensor
     readLightStatusPin();                                     // update light status
     readAlarmStatus();                                        // update alarm status
     readRaspiStatus();                                        // update raspi status
@@ -178,32 +190,15 @@ void gateOpener(int value){                                   // gate opener
   digitalWrite(GATEPIN, value);
 }
 
-void readDHT22()                                              // read weather data from sensors
+void readHTU21D()                                              // read weather data from sensors
 {
-  if (DEBUG) Serial.print("DHT22, \t");
-  int chk = DHT.read22(DHTPIN);                               // readdata from sensor
-  //int chk = DHT.read11(DHTPIN);
-  switch (chk)                                                // check if read result was ok
-  {
-    case DHTLIB_OK:  
-      if (DEBUG) Serial.print("OK,\t"); 
-      break;
-    case DHTLIB_ERROR_CHECKSUM: 
-      if (DEBUG) Serial.print("Checksum error,\t"); 
-      break;
-    case DHTLIB_ERROR_TIMEOUT: 
-      if (DEBUG) Serial.print("Time out error,\t"); 
-      break;
-    default: 
-      if (DEBUG) Serial.print("Unknown error,\t"); 
-      break;
-  }
+  if (DEBUG) Serial.print("HTU21D, \t");
+  humidity = tempHumSendor.readHumidity();
+  temperature = tempHumSendor.readTemperature();
   if (DEBUG) Serial.print("T: ");
-  if (DEBUG) Serial.print(DHT.temperature, 1);
-  temperature = DHT.temperature;                              // update temperature global var
-  if (DEBUG) Serial.print(",\tH: ");
-  if (DEBUG) Serial.println(DHT.humidity, 1);
-  humidity = DHT.humidity;                                    // update humidity global var
+  if (DEBUG) Serial.print(temperature);
+  if (DEBUG) Serial.print("\tH: ");
+  if (DEBUG) Serial.println(humidity);
 }
 
 static word homePage() {
