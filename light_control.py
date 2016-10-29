@@ -114,7 +114,7 @@ def read_light_meter(temp):
    try:
       response = urllib2.urlopen(arduinoIP, timeout=2)
       html = response.read()
-      temp,humid,light,alarm,rasp = html.split()
+      temp,humid,pres,light,alarm,rasp = html.split()
    except socket.timeout, e:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
    except:
@@ -166,19 +166,22 @@ def read_local_data():
    global arduinoIP
    lTemp = "0.00"
    lHumid = "0.00"
+   lPres = "0.00"
 
    # Read data from Arduino
    try:
       response = urllib2.urlopen(arduinoIP, timeout=2)
       html = response.read()
-      temp,humid,alarm,light,rasp = html.split()
+      temp,humid,pres,alarm,light,rasp = html.split()
       lTemp = "{0:0.1f}".format(float(temp))
       lHumid =  "{0:0.1f}".format(float(humid))
+      lPres =  "{0:0.1f}".format(float(pres))
    except socket.timeout, e:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
    except:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
    finally:
+      #return lTemp + " " + lHumid + " " + lPres
       return lTemp + " " + lHumid
 
 def get_status():
