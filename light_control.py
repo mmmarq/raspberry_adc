@@ -32,7 +32,7 @@ logFile = ""
 #Define if light is in manual operation
 manualOperation = False
 #Light level to trigger light_on
-minLightLevel = 88
+minLightLevel = 90
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
@@ -60,6 +60,12 @@ cameraCfgFile = "/home/pi/.keys/camera.cfg"
 arduinoCfgFile = "/home/pi/.keys/arduino.cfg"
 #Arduino Address
 arduinoIP = ""
+#Barometer readings size
+sizeBarometerData = 60
+#Barometer readings
+barometerData = []
+#Barometer Trending
+barometerTrend = 'S'
 
 #Cyphering paths
 PUB_KEY = "/home/pi/.keys/public"
@@ -122,6 +128,23 @@ def read_light_meter(temp):
    finally:
       #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level loaded: " + light)
       return light
+
+def read_barometer(temp):
+   global arduinoIP
+   pres = temp
+   # Read data from Arduino
+   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
+   try:
+      response = urllib2.urlopen(arduinoIP, timeout=2)
+      html = response.read()
+      temp,humid,pres,light,alarm,rasp = html.split()
+   except socket.timeout, e:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
+   except:
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
+   finally:
+      #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level loaded: " + light)
+      return pres
 
 def read_pass_phrase():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
@@ -220,14 +243,34 @@ def init_gpio(pinList):
 
 def get_image(data):
    if ( int(data) < len(cameraURL) ):
-     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading snapshot from camera " + data)
-     resource = urllib.urlopen(cameraURL[int(data)-1])
-     image = resource.read()
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading snapshot from camera " + data)
+      resource = urllib.urlopen(cameraURL[int(data)-1])
+      image = resource.read()
    else:
-     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Camera URL not available (" + data + ")")
-     image = ""
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Camera URL not available (" + data + ")")
+      image = ""
    return image
 
+def barometer_reader():
+   global sizeBarometerData
+   global barometerData
+   global barometerTrend
+   
+   lastRead = read_barometer('0')
+   while True:
+      if len(barometerData) >= sizeBarometerData:
+         barometerData = barometerData[1:]
+      lastRead = read_barometer(lastRead)
+      barometerData.append(lastRead)
+      if barometerData[0] < barometerData[-1]:
+         barometerTrend = 'H'
+      elif barometerData[0] > barometerData[-1]:
+         barometerTrend = 'L'
+      else:
+         barometerTrend = 'S'
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Barometer Trend: " + barometerTrend + " (" + str(barometerData[0]) + " - " + str(barometerData[-1]) + ")")
+      time.sleep(60)
+      
 def light_control():
    global manualOperation
    global lightStatus
@@ -468,7 +511,13 @@ def main():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control Network Server")
    p2 = threading.Thread(target=light_server, args=[])
    p2.start()
+
+   #Start barometer reader thread
+   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Barometer Reader Thread")
+   p3 = threading.Thread(target=barometer_reader, args=[])
+   p3.start()
    
+
    while True:
       time.sleep(5)
 
