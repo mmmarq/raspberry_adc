@@ -268,7 +268,7 @@ def barometer_reader():
          barometerTrend = 'L'
       else:
          barometerTrend = 'S'
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Barometer Trend: " + barometerTrend + " (" + str(barometerData[0]) + " - " + str(barometerData[-1]) + ")")
+      #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Barometer Trend: " + barometerTrend + " (" + str(barometerData[0]) + " - " + str(barometerData[-1]) + ")")
       time.sleep(60)
       
 def light_control():
