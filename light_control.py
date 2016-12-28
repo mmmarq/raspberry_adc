@@ -32,7 +32,7 @@ logFile = ""
 #Define if light is in manual operation
 manualOperation = False
 #Light level to trigger light_on
-minLightLevel = 90
+minLightLevel = 150
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
