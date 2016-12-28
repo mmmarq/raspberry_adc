@@ -228,7 +228,7 @@ float readBMP180()
     status = pressureSensor.getTemperature(T);
     if (status != 0)
     {
-      if (DEBUG) Serial.print("BMP180,\tT: ");
+      if (DEBUG) Serial.print("BMP180, \tT: ");
       if (DEBUG) Serial.print(T,2);
       temp2 = (float) T;
 
