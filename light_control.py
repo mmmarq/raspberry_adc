@@ -195,9 +195,10 @@ def light_control():
          turn_light_off(lightPins)
 
       #If code reach this elif it means that it is day light, so turn light off anyway
-      elif (lightStatus):
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Day light... Turns light off anyway!")
-         turn_light_off(lightPins)
+      else:
+         if (lightStatus):
+            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Day light... Turns light off anyway!")
+            turn_light_off(lightPins)
          manualOperation = False
 
       #Just wait a while before start next loop iteration
