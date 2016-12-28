@@ -18,28 +18,31 @@ import urllib
 import urllib2
 import re
 import os
+import ephem
 from subprocess import Popen, PIPE, call
 from time import localtime, strftime
 from datetime import timedelta
+from datetime import datetime
 from keyczar import keyczar
 from keyczar import keyczart
 from keyczar.errors import KeyczarError
 from optparse import OptionParser
 import RPi.GPIO as GPIO
 
+#Set Ephemerides location
+location = ephem.Observer()
+location.lat = '-22:41:94'
+location.lon = '-46:84:02'
+sun = ephem.Sun()
+
 #Log file name
 logFile = ""
 #Define if light is in manual operation
 manualOperation = False
-#Light level to trigger light_on
-minLightLevel = 150
 #GPIO pin to control light relay
-lightPin1 = 16
-lightPin2 = 20
+lightPins = (16,20)
 #Control light status
 lightStatus = False
-#Control if light meter should sleep
-mySleep = False
 #GPIO pin to open gate
 gatePin = 26
 #Gate signal lenght
@@ -50,8 +53,6 @@ portNum = 50004
 ipAddr = "192.168.1.2"
 #Config file folder
 configFileFolder = "/mnt/code/log"
-#Config file name
-configFileName = "light_control.cfg"
 #Camera URL
 cameraURL = []
 #Camera CFG file
@@ -66,23 +67,6 @@ PUB_KEY = "/home/pi/.keys/public"
 PVT_KEY = "/home/pi/.keys/private"
 SGN_KEY = "/home/pi/.keys/signkeys"
 PASS_PHRASE = "/home/pi/.keys/passphrase"
-
-#Function to call turn_light_off by alarm signal
-def handler_light_off(signum, frame):
-   global manualOperation
-   global lightStatus
-   global mySleep
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Its time to turn lights off... See you tomorrow!")
-   turn_light_off(lightPin1)
-   turn_light_off(lightPin2)
-   lightStatus = False
-   manualOperation = False
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level checking is going to sleep until morning.")
-   #Set sleep true in order to trigger light on only next night
-   mySleep = True
-   #Save config file
-   save_status()
-   signal.alarm(0)
 
 def load_camera_url():
    global cameraURL
@@ -106,23 +90,6 @@ def gate_opener(gatePin):
    time.sleep(gateSignalLenght)
    GPIO.output(gatePin, False)
 
-def read_light_meter(temp):
-   global arduinoIP
-   light = temp
-   # Read data from Arduino
-   #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading light level from " + arduinoIP)
-   try:
-      response = urllib2.urlopen(arduinoIP, timeout=2)
-      html = response.read()
-      temp,humid,pres,light,alarm,rasp = html.split()
-   except socket.timeout, e:
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
-   except:
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Error reading data from Arduino")
-   finally:
-      #logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light level loaded: " + light)
-      return light
-
 def read_pass_phrase():
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading pass phrase file")
    if not os.path.isfile(PASS_PHRASE):
@@ -131,36 +98,6 @@ def read_pass_phrase():
    with open(PASS_PHRASE) as f:
       content = f.readline()
       return content.rstrip()
-
-def read_status():
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
-   if not os.path.exists(configFileFolder):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
-      os.makedirs(configFileFolder)
-   if not os.path.isfile(os.path.join(configFileFolder,configFileName)):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
-      text_file = open(os.path.join(configFileFolder,configFileName), "w")
-      status = get_status()
-      text_file.write("%s" % status)
-      text_file.close()
-      return status
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading config file content")
-   with open(os.path.join(configFileFolder,configFileName)) as f:
-      content = f.readline()
-      return content
-
-def save_status():
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Saving configuration file")
-   if not os.path.exists(configFileFolder):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - " + configFileFolder + " folder does not exist, creating new one")
-      os.makedirs(configFileFolder)
-   if os.path.isfile(os.path.join(configFileFolder,configFileName)):
-      os.remove(os.path.join(configFileFolder,configFileName))
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Creating config file with current status")
-   text_file = open(os.path.join(configFileFolder,configFileName), "w")
-   status = get_status()
-   text_file.write("%s" % status)
-   text_file.close()
 
 def read_local_data():
    global arduinoIP
@@ -198,16 +135,18 @@ def get_status():
    status = status + read_local_data()
    return status
 
-def turn_light_on(lightPin):
+def turn_light_on(lightPins):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
-   GPIO.output(lightPin, True)
+   for pin in lightPins:
+      GPIO.output(pin, True)
    lightStatus = True
 
-def turn_light_off(lightPin):
+def turn_light_off(lightPins):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!")
-   GPIO.output(lightPin, False)
+   for pin in lightPins:
+      GPIO.output(pin, False)
    lightStatus = False
 
 def init_gpio(pinList):
@@ -230,100 +169,43 @@ def get_image(data):
 def light_control():
    global manualOperation
    global lightStatus
-   global mySleep
    global arduinoIP
-   tLight = 0
+   global location
+   global sun
 
    #Load Arduino IP address
    load_arduino_ip()
 
-   #Variable to make this thread turn light on automatically only next day
-   mySleep = False
-
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Control!")
    
-   #Read previous status
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Reading configuration file")
-   status = read_status()
-   logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Configuration file content: " + status)
-   if ( status.split(' ')[0] == "on" ):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light on")
-      lightStatus = True
-      turn_light_on(lightPin1)
-      turn_light_on(lightPin2)
-      timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-      signal.alarm(int(timeFrame.total_seconds()))
-   else:
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set light off")
-      lightStatus = False
-      turn_light_off(lightPin1)
-      turn_light_off(lightPin2)
-      signal.alarm(0)
-   if ( status.split(' ')[1] == "manual" ):
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
-      manualOperation = True
-   else:
-      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
-      manualOperation = False
-
    #Keep it running forever
    while True:
-      #Read ADC light meter value and test
-      #only if there is no light enough outside(check minLightLevel)
-      #light is not already on (lightStatus)
-      #system is not in manual operation (manualOperation)
-      #light meter is not in sleep mode (mySleep)
+      #Get next Sunset time
+      location.date = datetime.utcnow()
+      sun.compute(location)
       
-      #Temporary light level
-      tLight = int(read_light_meter(tLight))
-      if ( tLight <= minLightLevel and not lightStatus and not manualOperation and not mySleep ):
-         #If light level lower than trigger and light off, turn light on
-         turn_light_on(lightPin1)
-         turn_light_on(lightPin2)
-         #Set alarm to turn light off
-         timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-         signal.alarm(int(timeFrame.total_seconds()))
-         #Save config file
-         save_status()
-         #Since adc return value can vary easily, wait little more time to next loop
-         time.sleep(600) #sleep 10 minutes
-      
-      #Check if there is light enough outside
-      elif ( tLight > minLightLevel ):
-         #Log light level
-         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Light level: " + str(tLight))
-         #Remove any existing alarm
-         signal.alarm(0)
-         #Set manual operation fasle (no)
-         if ( manualOperation ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Set manual operation false.")
-            manualOperation = False
-         #Set sleep false in order to enable light turn on next night
-         if ( mySleep ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Wake up light level checking.")
-            mySleep = False
-         
-         #If ligh is on, turn light off
-         if ( lightStatus ):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good morning... Turns light off!")
-            #If light level bigger than trigger and light on, turn light off
-            turn_light_off(lightPin1)
-            turn_light_off(lightPin2)
-         #Save config file
-         save_status()
-         
-         #Since adc return value can vary easily, wait little more time to next loop
-         time.sleep(300) #sleep 5 minutes
-         
+      #If next sunset is going to happens in next day it means that it is night
+      if ( (datetime.now().date() < ephem.localtime(location.next_setting(sun)).date()) and not manualOperation ):
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good night... Turns light on!")
+         turn_light_on(lightPins)
+
+      #If next sun rising is going to happens in current dayit meand that is is time to turn light off
+      elif ( (datetime.now().date() == ephem.localtime(location.next_rising(sun)).date()) and not manualOperation ):
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sleep time... Turns light off!")
+         turn_light_off(lightPins)
+
+      #If code reach this elif it means that it is day light, so turn light off anyway
+      elif (lightStatus):
+         logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Day light... Turns light off anyway!")
+         turn_light_off(lightPins)
+         manualOperation = False
+
       #Just wait a while before start next loop iteration
-      time.sleep(60)
+      time.sleep(10)
 
 def light_server():
    global lightStatus
    global manualOperation
-   global mySleep
    
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Network Server")
 
@@ -374,39 +256,23 @@ def light_server():
             logging.info("Message sent!")
          elif ( msg == "light.on" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light on request")
-            turn_light_on(lightPin1)
-            turn_light_on(lightPin2)
+            turn_light_on(lightPins)
             manualOperation = True
-            mySleep = True
             timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-            signal.alarm(int(timeFrame.total_seconds()))
-            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "light.off" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turn light off request")
-            turn_light_off(lightPin1)
-            turn_light_off(lightPin2)
+            turn_light_off(lightPins)
             manualOperation = True
-            mySleep = True
-            signal.alarm(0)
-            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.manual" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation manual")
             manualOperation = True
-            signal.alarm(0)
-            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif ( msg == "set.automatic" ):
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Set operation automatic")
             manualOperation = False
-            mySleep = False
-            if ( lightStatus ):
-               timeFrame = timedelta(hours=(23 - int(strftime("%H", localtime()))),minutes=(59 - int(strftime("%M", localtime()))), seconds=(59 - int(strftime("%S", localtime()))))
-               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Light is going to off in " + str(int(timeFrame.total_seconds())) + " seconds")
-               signal.alarm(int(timeFrame.total_seconds()))
-            save_status()
             c.send(crypter.Encrypt(get_status()))
          elif re.match('^gate.open\|.+',msg) is not None:
             logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Gate Opening request")
@@ -451,12 +317,10 @@ def main():
    #Log start
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Control threads!")
 
-   #Set SIGALARM response
-   signal.signal(signal.SIGALRM, handler_light_off)
-
    #Initialize pin
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Setup GPIO Pins")
-   init_gpio((lightPin1,lightPin2,gatePin))
+   init_gpio(lightPins)
+   init_gpio((gatePin))
 
    #Start light control thread
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Starting Light Sensor Thread")
@@ -469,7 +333,7 @@ def main():
    p2.start()
    
    while True:
-      time.sleep(5)
+      time.sleep(1000)
 
    GPIO.cleanup()
 
