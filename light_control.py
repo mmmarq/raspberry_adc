@@ -32,7 +32,7 @@ logFile = ""
 #Define if light is in manual operation
 manualOperation = False
 #Light level to trigger light_on
-minLightLevel = 88
+minLightLevel = 150
 #GPIO pin to control light relay
 lightPin1 = 16
 lightPin2 = 20
@@ -114,7 +114,7 @@ def read_light_meter(temp):
    try:
       response = urllib2.urlopen(arduinoIP, timeout=2)
       html = response.read()
-      temp,humid,light,alarm,rasp = html.split()
+      temp,humid,pres,light,alarm,rasp = html.split()
    except socket.timeout, e:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
    except:
@@ -166,14 +166,16 @@ def read_local_data():
    global arduinoIP
    lTemp = "0.00"
    lHumid = "0.00"
+   lPres = "0.00"
 
    # Read data from Arduino
    try:
       response = urllib2.urlopen(arduinoIP, timeout=2)
       html = response.read()
-      temp,humid,alarm,light,rasp = html.split()
+      temp,humid,pres,alarm,light,rasp = html.split()
       lTemp = "{0:0.1f}".format(float(temp))
       lHumid =  "{0:0.1f}".format(float(humid))
+      lPres =  "{0:0.1f}".format(float(pres))
    except socket.timeout, e:
       logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Timeout error reading data from Arduino")
    except:
@@ -217,12 +219,12 @@ def init_gpio(pinList):
 
 def get_image(data):
    if ( int(data) < len(cameraURL) ):
-     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading snapshot from camera " + data)
-     resource = urllib.urlopen(cameraURL[int(data)-1])
-     image = resource.read()
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Loading snapshot from camera " + data)
+      resource = urllib.urlopen(cameraURL[int(data)-1])
+      image = resource.read()
    else:
-     logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Camera URL not available (" + data + ")")
-     image = ""
+      logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Camera URL not available (" + data + ")")
+      image = ""
    return image
 
 def light_control():
