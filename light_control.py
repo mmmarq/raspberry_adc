@@ -185,16 +185,18 @@ def light_control():
       sun.compute(location)
       
       #If next sunset is going to happens in next day it means that it is night
-      if ( (datetime.now().date() < ephem.localtime(location.next_setting(sun)).date()) and not manualOperation ):
-         if (not lightStatus):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good night... Turns light on!")
-            turn_light_on(lightPins)
+      if ( datetime.now().date() < ephem.localtime(location.next_setting(sun)).date() ):
+         if ( not manualOperation ):
+            if (not lightStatus):
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good night... Turns light on!")
+               turn_light_on(lightPins)
 
       #If next sun rising is going to happens in current dayit meand that is is time to turn light off
-      elif ( (datetime.now().date() == ephem.localtime(location.next_rising(sun)).date()) and not manualOperation ):
-         if (lightStatus):
-            logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sleep time... Turns light off!")
-            turn_light_off(lightPins)
+      elif ( datetime.now().date() == ephem.localtime(location.next_rising(sun)).date() ):
+         if ( not manualOperation ):
+            if (lightStatus):
+               logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sleep time... Turns light off!")
+               turn_light_off(lightPins)
 
       #If code reach this elif it means that it is day light, so turn light off anyway
       else:
