@@ -31,11 +31,8 @@ import RPi.GPIO as GPIO
 
 #Set Ephemerides location
 location = ephem.Observer()
-#Set Observer position Latitude and Longitude
 location.lat = '-22:41:94'
 location.lon = '-46:84:02'
-#Set Observer Location Twilight compensation value
-location.horizon='+7'
 sun = ephem.Sun()
 
 #Log file name
@@ -188,14 +185,14 @@ def light_control():
       sun.compute(location)
       
       #If next sunset is going to happens in next day it means that it is night
-      if ( datetime.now().date() < ephem.localtime(location.next_setting(sun, use_center=True)).date() ):
+      if ( datetime.now().date() < ephem.localtime(location.next_setting(sun)).date() ):
          if ( not manualOperation ):
             if (not lightStatus):
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Good night... Turns light on!")
                turn_light_on(lightPins)
 
       #If next sun rising is going to happens in current dayit meand that is is time to turn light off
-      elif ( datetime.now().date() == ephem.localtime(location.next_rising(sun, use_center=True)).date() ):
+      elif ( datetime.now().date() == ephem.localtime(location.next_rising(sun)).date() ):
          if ( not manualOperation ):
             if (lightStatus):
                logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Sleep time... Turns light off!")
