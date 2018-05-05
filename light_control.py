@@ -139,14 +139,14 @@ def turn_light_on(lightPins):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light on!")
    for pin in lightPins:
-      GPIO.output(pin, True)
+      GPIO.output(pin, False)
    lightStatus = True
 
 def turn_light_off(lightPins):
    global lightStatus
    logging.info(strftime("%d-%m-%Y %H:%M", localtime()) + " - Turning light off!")
    for pin in lightPins:
-      GPIO.output(pin, False)
+      GPIO.output(pin, True)
    lightStatus = False
 
 def init_gpio(pinList):
